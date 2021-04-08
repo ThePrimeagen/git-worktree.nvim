@@ -51,6 +51,18 @@ local function has_worktree(path, cb)
     job:start()
 end
 
+local function failure(cmd, path)
+    return function(e)
+        error(string.format(
+        "Unable to create_worktree: PATH %s CMD %s RES %s, ERR %s",
+        path,
+        vim.inspect(cmd),
+        vim.inspect(e:result()),
+        vim.inspect(e:stderr_result())))
+    end
+end
+
+
 local function has_branch(path, cb)
     local found = false
     local job = Job:new({
@@ -76,7 +88,7 @@ local function create_worktree(path, upstream, found_branch)
     })
 
     local set_branch = Job:new({
-        'git', 'branch', '-u', upstream,
+        'git', 'branch', string.format('--set-upstream-to=%s', upstream), path,
         cwd = worktree_path,
     })
 
@@ -89,13 +101,6 @@ local function create_worktree(path, upstream, found_branch)
     fetch:and_then_on_success(set_branch)
     set_branch:and_then_on_success(rebase)
 
-    local function failure(e)
-        error(string.format(
-            "Unable to create_worktree: RES %s, ERR %s",
-            vim.inspect(e:result()),
-            vim.inspect(e:stderr_result())))
-    end
-
     rebase:after_success(function()
 
         vim.schedule(function()
@@ -107,10 +112,10 @@ local function create_worktree(path, upstream, found_branch)
 
     end)
 
-    create:after_failure(failure)
-    fetch:after_failure(failure)
-    set_branch:after_failure(failure)
-    rebase:after_failure(failure)
+    create:after_failure(failure(create.args, root))
+    fetch:after_failure(failure(fetch.args, worktree_path))
+    set_branch:after_failure(failure(set_branch.args, worktree_path))
+    rebase:after_failure(failure(rebase.args, worktree_path))
 
     create:start()
 end
@@ -142,12 +147,50 @@ M.switch_worktree = function(path)
                 on_change_callbacks[idx]("switch", path)
             end
         end)
+
     end)
+end
+
+M.delete_worktree = function(path)
+    -- TODO: Implement
+
+    vim.schedule(function()
+        change_dirs(path)
+        for idx = 1, #on_change_callbacks do
+            on_change_callbacks[idx]("delete", path)
+        end
+    end)
+
 end
 
 M.set_worktree_root = function(wd)
     root = wd
 end
+
+M.update_buffers = function(path)
+
+    -- Go through all your buffers.
+    -- see if they exist in the current worktree
+    -- if exists open new buffer in background
+    -- delete buffer
+    -- if no buffers exist, open up ex
+
+    local cwd = vim.loop.cwd()
+    for _, buf in pairs(vim.api.nvim_list_bufs()) do
+        if vim.api.nvim_buf_is_loaded(buf) then
+            local name = Path:new(vim.fn.bufname(buf)):absolute()
+            local start, fin = string.find(name, cwd, 1, true)
+            if start == nil then
+                local local_name = name:sub(fin + 1)
+                print("XXXXX LOCAL NAME", local_name)
+            end
+        end
+    end
+end
+
+local without = "/home/theprimeagen/personal/nrdp/20.1/src/scriptengine/script/jsc/inspector/RuntimeHandler.cpp"
+local within = "/home/theprimeagen/personal/nrdp/20.3/src/scriptengine/script/jsc/inspector/RuntimeHandler.cpp"
+
 
 M.on_tree_change = function(cb)
     table.insert(on_change_callbacks, cb)
