@@ -2,7 +2,10 @@ local Job = require("plenary.job")
 local Path = require("plenary.path")
 
 local M = {}
-local root = vim.loop.cwd()
+
+-- TODO: how no global friend?
+git_worktree_root = git_worktree_root or vim.loop.cwd()
+
 local on_change_callbacks = {}
 
 local function change_dirs(path)
@@ -25,7 +28,7 @@ local function create_worktree_job(path, found_branch)
 
     table.insert(config, path)
     table.insert(config, path)
-    config.cwd = root
+    config.cwd = git_worktree_root
 
     return Job:new(config)
 end
@@ -42,7 +45,7 @@ local function has_worktree(path, cb)
             local start_with_head = string.find(data, string.format("[heads/%s]", path), 1, true)
             found = found or start or start_with_head
         end,
-        cwd = root
+        cwd = git_worktree_root
     })
 
     job:after(function()
@@ -70,7 +73,7 @@ local function has_branch(path, cb)
             data = vim.trim(data)
             found = found or data == path
         end,
-        cwd = root
+        cwd = git_worktree_root
     })
 
     job:after(function()
@@ -80,7 +83,7 @@ end
 
 local function create_worktree(path, upstream, found_branch)
     local create = create_worktree_job(path, found_branch)
-    local worktree_path = Path:new(root, path):absolute()
+    local worktree_path = Path:new(git_worktree_root, path):absolute()
 
     local fetch = Job:new({
         'git', 'fetch', '--all',
@@ -112,7 +115,7 @@ local function create_worktree(path, upstream, found_branch)
 
     end)
 
-    create:after_failure(failure(create.args, root))
+    create:after_failure(failure(create.args, git_worktree_root))
     fetch:after_failure(failure(fetch.args, worktree_path))
     set_branch:after_failure(failure(set_branch.args, worktree_path))
     rebase:after_failure(failure(rebase.args, worktree_path))
@@ -121,6 +124,10 @@ local function create_worktree(path, upstream, found_branch)
 end
 
 M.create_worktree = function(path, upstream)
+
+    if upstream == nil then
+        error("Please provide an upstream...")
+    end
 
     has_worktree(path, function(found)
         if found then
@@ -164,33 +171,39 @@ M.delete_worktree = function(path)
 end
 
 M.set_worktree_root = function(wd)
-    root = wd
+    git_worktree_root = wd
 end
 
-M.update_buffers = function(path)
-
-    -- Go through all your buffers.
-    -- see if they exist in the current worktree
-    -- if exists open new buffer in background
-    -- delete buffer
-    -- if no buffers exist, open up ex
-
+M.update_current_buffer = function()
     local cwd = vim.loop.cwd()
-    for _, buf in pairs(vim.api.nvim_list_bufs()) do
-        if vim.api.nvim_buf_is_loaded(buf) then
-            local name = Path:new(vim.fn.bufname(buf)):absolute()
-            local start, fin = string.find(name, cwd, 1, true)
-            if start == nil then
-                local local_name = name:sub(fin + 1)
-                print("XXXXX LOCAL NAME", local_name)
-            end
-        end
+    local current_buf_name = vim.api.nvim_buf_get_name(0)
+
+    if not current_buf_name or current_buf_name == "" then
+        return false
     end
+
+    local name = Path:new(current_buf_name):absolute()
+    local start, fin = string.find(name, cwd, 1, true)
+
+    if start ~= nil then
+        return true
+    end
+
+    start, fin = string.find(name, git_worktree_root, 1, true)
+    if start == nil then
+        return false
+    end
+
+    local local_name = name:sub(fin + 2)
+
+    start, fin = string.find(local_name, Path.path.sep, 1, true)
+    local_name = local_name:sub(fin + 1)
+
+    local bufnr = vim.fn.bufnr(Path:new({cwd, local_name}):absolute() , true)
+    vim.api.nvim_set_current_buf(bufnr)
+
+    return true
 end
-
-local without = "/home/theprimeagen/personal/nrdp/20.1/src/scriptengine/script/jsc/inspector/RuntimeHandler.cpp"
-local within = "/home/theprimeagen/personal/nrdp/20.3/src/scriptengine/script/jsc/inspector/RuntimeHandler.cpp"
-
 
 M.on_tree_change = function(cb)
     table.insert(on_change_callbacks, cb)
@@ -198,17 +211,20 @@ end
 
 M.reload = function()
     -- todo: this is clearly a bad idea
-    local local_root = root
+    local local_root = git_worktree_root
     require("plenary.reload").reload_module("git-worktree")
     require("git-worktree").set_worktree_root(local_root)
 end
 
 M.get_root = function()
-    return root
+    return git_worktree_root
 end
 
 M.get_worktree_path = function(path)
-    return Path:new(root, path):absolute()
+    return Path:new(git_worktree_root, path):absolute()
+end
+
+M.setup = function()
 end
 
 return M
