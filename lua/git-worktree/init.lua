@@ -158,16 +158,36 @@ M.switch_worktree = function(path)
     end)
 end
 
-M.delete_worktree = function(path)
+M.delete_worktree = function(path, force)
     -- TODO: Implement
 
-    vim.schedule(function()
-        change_dirs(path)
-        for idx = 1, #on_change_callbacks do
-            on_change_callbacks[idx]("delete", path)
+    has_worktree(path, function(found)
+        if not found then
+            error(string.format("Worktree %s does not exist", path))
         end
-    end)
 
+        local cmd = {
+            "git", "worktree", "remove", path
+        }
+
+        if force then
+            table.insert(cmd, "--force")
+        end
+
+        local delete = Job:new(cmd)
+        delete:after_success(function()
+            vim.schedule(function()
+                change_dirs(path)
+                for idx = 1, #on_change_callbacks do
+                    on_change_callbacks[idx]("delete", path)
+                end
+            end)
+
+        end)
+
+        delete:after_failure(failure(cmd, vim.loop.cwd()))
+        delete:start()
+    end)
 end
 
 M.set_worktree_root = function(wd)
