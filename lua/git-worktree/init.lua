@@ -2,11 +2,26 @@ local Job = require("plenary.job")
 local Path = require("plenary.path")
 
 local M = {}
-
--- TODO: how no global friend?
-git_worktree_root = git_worktree_root or vim.loop.cwd()
-
+local git_worktree_root = vim.loop.cwd()
 local on_change_callbacks = {}
+
+local function on_tree_change_handler(op, path, _) -- _ = upstream
+    if M._config.update_on_change then
+        if op == "switch" then
+            local changed = M.update_current_buffer()
+            if not changed then
+                vim.cmd(string.format(":Ex %s", M.get_worktree_path(path)))
+            end
+        end
+    end
+end
+
+local function emit_on_change(op, path, upstream)
+    on_tree_change_handler(op, path, upstream)
+    for idx = 1, #on_change_callbacks do
+        on_change_callbacks[idx](op, path, upstream)
+    end
+end
 
 local function change_dirs(path)
     local worktree_path = M.get_worktree_path(path)
@@ -107,9 +122,7 @@ local function create_worktree(path, upstream, found_branch)
     rebase:after_success(function()
 
         vim.schedule(function()
-            for idx = 1, #on_change_callbacks do
-                on_change_callbacks[idx]("create", path, upstream)
-            end
+            emit_on_change("create", path, upstream)
             M.switch_worktree(path)
         end)
 
@@ -150,9 +163,7 @@ M.switch_worktree = function(path)
 
         vim.schedule(function()
             change_dirs(path)
-            for idx = 1, #on_change_callbacks do
-                on_change_callbacks[idx]("switch", path)
-            end
+            emit_on_change("switch", path)
         end)
 
     end)
@@ -175,15 +186,9 @@ M.delete_worktree = function(path, force)
         end
 
         local delete = Job:new(cmd)
-        delete:after_success(function()
-            vim.schedule(function()
-                change_dirs(path)
-                for idx = 1, #on_change_callbacks do
-                    on_change_callbacks[idx]("delete", path)
-                end
-            end)
-
-        end)
+        delete:after_success(vim.schedule_wrap(function()
+            emit_on_change("delete", path)
+        end))
 
         delete:after_failure(failure(cmd, vim.loop.cwd()))
         delete:start()
@@ -194,9 +199,10 @@ M.set_worktree_root = function(wd)
     git_worktree_root = wd
 end
 
-M.update_current_buffer = function()
+M.update_current_buffer = function(x)
     local cwd = vim.loop.cwd()
     local current_buf_name = vim.api.nvim_buf_get_name(0)
+    local current_bufnr = vim.fn.bufnr(0)
 
     if not current_buf_name or current_buf_name == "" then
         return false
@@ -217,6 +223,11 @@ M.update_current_buffer = function()
     local local_name = name:sub(fin + 2)
 
     start, fin = string.find(local_name, Path.path.sep, 1, true)
+
+    if not start then
+        return false
+    end
+
     local_name = local_name:sub(fin + 1)
 
     local bufnr = vim.fn.bufnr(Path:new({cwd, local_name}):absolute() , true)
@@ -229,11 +240,8 @@ M.on_tree_change = function(cb)
     table.insert(on_change_callbacks, cb)
 end
 
-M.reload = function()
-    -- todo: this is clearly a bad idea
-    local local_root = git_worktree_root
-    require("plenary.reload").reload_module("git-worktree")
-    require("git-worktree").set_worktree_root(local_root)
+M.reset = function()
+    on_change_callbacks = {}
 end
 
 M.get_root = function()
@@ -244,9 +252,12 @@ M.get_worktree_path = function(path)
     return Path:new(git_worktree_root, path):absolute()
 end
 
-M.setup = function()
+M.setup = function(config)
+    config = config or {}
+    M._config = vim.tbl_deep_extend("force", {
+        update_on_change = true
+    }, config)
 end
+M.setup()
 
 return M
-
-
