@@ -258,6 +258,7 @@ M.setup = function(config)
         update_on_change = true
     }, config)
 end
+
 M.setup()
 
 return M
