@@ -1,6 +1,9 @@
 local Job = require("plenary.job")
 local Path = require("plenary.path")
 
+local Status = require("git-worktree.status")
+
+local status = Status:new()
 local M = {}
 local git_worktree_root = vim.loop.cwd()
 local on_change_callbacks = {}
@@ -17,10 +20,14 @@ local function on_tree_change_handler(op, path, _) -- _ = upstream
 end
 
 local function emit_on_change(op, path, upstream)
+
+    -- TODO: We don't have a way to async update what is running
+    status:next_status(string.format("Running post %s callbacks", op))
     on_tree_change_handler(op, path, upstream)
     for idx = 1, #on_change_callbacks do
         on_change_callbacks[idx](op, path, upstream)
     end
+
 end
 
 local function change_dirs(path)
@@ -39,6 +46,9 @@ local function create_worktree_job(path, found_branch)
 
     local config = {
         'git', 'worktree', 'add',
+        on_start = function()
+            status:next_status("git worktree add")
+        end
     }
 
     if not found_branch then
@@ -70,17 +80,21 @@ local function has_worktree(path, cb)
     job:after(function()
         cb(found)
     end)
+
+    -- TODO: I really don't want status's spread everywhere... seems bad
+    status:next_status("Checking for worktree")
     job:start()
 end
 
-local function failure(cmd, path)
+local function failure(from, cmd, path)
     return function(e)
-        error(string.format(
-        "Unable to create_worktree: PATH %s CMD %s RES %s, ERR %s",
-        path,
-        vim.inspect(cmd),
-        vim.inspect(e:result()),
-        vim.inspect(e:stderr_result())))
+        status:error(string.format(
+            "%s Failed: PATH %s CMD %s RES %s, ERR %s",
+            from,
+            path,
+            vim.inspect(cmd),
+            vim.inspect(e:result()),
+            vim.inspect(e:stderr_result())))
     end
 end
 
@@ -92,9 +106,11 @@ local function has_branch(path, cb)
             data = vim.trim(data)
             found = found or data == path
         end,
-        cwd = git_worktree_root
+        cwd = git_worktree_root,
     })
 
+    -- TODO: I really don't want status's spread everywhere... seems bad
+    status:next_status(string.format("Checking for branch %s", path))
     job:after(function()
         cb(found)
     end):start()
@@ -107,29 +123,39 @@ local function create_worktree(path, upstream, found_branch)
     local fetch = Job:new({
         'git', 'fetch', '--all',
         cwd = worktree_path,
+        on_start = function()
+            status:next_status("git fetch --all (This may take a moment)")
+        end
     })
 
     local set_branch = Job:new({
         'git', 'branch', string.format('--set-upstream-to=%s', upstream), path,
         cwd = worktree_path,
+        on_start = function()
+            status:next_status("git set_branch")
+        end
     })
 
     local rebase = Job:new({
         'git', 'rebase',
         cwd = worktree_path,
+        on_start = function()
+            status:next_status("git rebase")
+        end
     })
 
     create:and_then_on_success(fetch)
     fetch:and_then_on_success(set_branch)
     set_branch:and_then_on_success(rebase)
 
-    create:after_failure(failure(create.args, git_worktree_root))
-    fetch:after_failure(failure(fetch.args, worktree_path))
-    set_branch:after_failure(failure(set_branch.args, worktree_path))
+    create:after_failure(failure("create_worktree", create.args, git_worktree_root))
+    fetch:after_failure(failure("create_worktree", fetch.args, worktree_path))
+    set_branch:after_failure(failure("create_worktree", set_branch.args, worktree_path))
 
     rebase:after(function()
+
         if rebase.code ~= 0 then
-            print("Rebase failed, but that's ok.")
+            status:status("Rebase failed, but that's ok.")
         end
 
         vim.schedule(function()
@@ -142,6 +168,7 @@ local function create_worktree(path, upstream, found_branch)
 end
 
 M.create_worktree = function(path, upstream)
+    status:reset(7)
 
     if upstream == nil then
         error("Please provide an upstream...")
@@ -160,6 +187,7 @@ M.create_worktree = function(path, upstream)
 end
 
 M.switch_worktree = function(path)
+    status:reset(2)
     has_worktree(path, function(found)
 
         if not found then
@@ -175,8 +203,7 @@ M.switch_worktree = function(path)
 end
 
 M.delete_worktree = function(path, force)
-    -- TODO: Implement
-
+    status:reset(2)
     has_worktree(path, function(found)
         if not found then
             error(string.format("Worktree %s does not exist", path))
@@ -207,7 +234,6 @@ end
 M.update_current_buffer = function()
     local cwd = vim.loop.cwd()
     local current_buf_name = vim.api.nvim_buf_get_name(0)
-    local current_bufnr = vim.fn.bufnr(0)
 
     if not current_buf_name or current_buf_name == "" then
         return false
@@ -266,6 +292,10 @@ M.setup = function(config)
         update_on_change = true,
         clearjumps_on_change = true,
     }, config)
+end
+
+M.set_status = function(msg)
+    -- TODO: make this so #1
 end
 
 M.setup()
