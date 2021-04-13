@@ -52,6 +52,21 @@ There are three primary functions that should be your day to day.
 :lua require("git-worktree").delete_worktree("feat-69")
 ```
 
+### Telescope
+
+Add the following to your vimrc to load the telescope extension
+```lua
+require("telescope").load_extension("git_worktree")
+```
+
+To bring up the telescope window listing your workspaces run the following
+```lua
+:lua require('telescope').extensions.git_worktree.git_worktrees()
+-- <Enter> - switches to that worktree
+-- <c-d> - deletes that worktree
+-- <c-D> - force deletes that worktree
+```
+
 ## Hooks!
 Yes!  The best part about git-worktree is that it emits information so that you
 can act on it.
