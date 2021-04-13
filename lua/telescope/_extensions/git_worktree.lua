@@ -1,7 +1,10 @@
 local Job = require("plenary.job")
 local pickers = require("telescope.pickers")
 local finders = require("telescope.finders")
+local action_set = require "telescope.actions.set"
+local action_state = require "telescope.actions.state"
 local conf = require("telescope.config").values
+local gwt = require("git-worktree")
 
 local list_worktrees = function(cb)
 	local job = Job:new({
@@ -27,7 +30,18 @@ local telescope_git_worktree = function()
 				}),
 				sorter = conf.generic_sorter({}),
 				attach_mappings = function()
-					--TODO
+                    action_set.select:replace(function(prompt_bufnr, type)
+                        local selection = action_state.get_selected_entry(prompt_bufnr)
+                        local worktree = nil
+                        for section in selection[1]:gmatch("%[(.*)%]") do
+                            worktree = section
+                        end
+                        if worktree ~= nil then
+                            gwt.switch_worktree(worktree)
+                        end
+                    end)
+                    --TODO add delete worktree
+                    --TODO add create worktree? is this possible?
 					return true
 				end,
 			}):find()
