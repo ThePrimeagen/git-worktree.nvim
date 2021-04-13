@@ -29,6 +29,10 @@ local function change_dirs(path)
     -- vim.loop.chdir(worktree_path)
     local cmd = string.format("cd %s", worktree_path)
     vim.cmd(cmd)
+
+    if M._config.clearjumps_on_change then
+        vim.cmd("clearjumps")
+    end
 end
 
 local function create_worktree_job(path, found_branch)
@@ -200,7 +204,7 @@ M.set_worktree_root = function(wd)
     git_worktree_root = wd
 end
 
-M.update_current_buffer = function(x)
+M.update_current_buffer = function()
     local cwd = vim.loop.cwd()
     local current_buf_name = vim.api.nvim_buf_get_name(0)
     local current_bufnr = vim.fn.bufnr(0)
@@ -211,7 +215,6 @@ M.update_current_buffer = function(x)
 
     local name = Path:new(current_buf_name):absolute()
     local start, fin = string.find(name, cwd, 1, true)
-
     if start ~= nil then
         return true
     end
@@ -230,10 +233,14 @@ M.update_current_buffer = function(x)
     end
 
     local_name = local_name:sub(fin + 1)
+    local final_path = Path:new({cwd, local_name}):absolute()
 
-    local bufnr = vim.fn.bufnr(Path:new({cwd, local_name}):absolute() , true)
+    if not Path:new(final_path):exists() then
+        return false
+    end
+
+    local bufnr = vim.fn.bufnr(final_path, true)
     vim.api.nvim_set_current_buf(bufnr)
-
     return true
 end
 
@@ -256,7 +263,8 @@ end
 M.setup = function(config)
     config = config or {}
     M._config = vim.tbl_deep_extend("force", {
-        update_on_change = true
+        update_on_change = true,
+        clearjumps_on_change = true,
     }, config)
 end
 
