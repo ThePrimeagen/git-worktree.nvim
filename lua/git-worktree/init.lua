@@ -119,19 +119,20 @@ local function create_worktree(path, upstream, found_branch)
     fetch:and_then_on_success(set_branch)
     set_branch:and_then_on_success(rebase)
 
-    rebase:after_success(function()
+    create:after_failure(failure(create.args, git_worktree_root))
+    fetch:after_failure(failure(fetch.args, worktree_path))
+    set_branch:after_failure(failure(set_branch.args, worktree_path))
+
+    rebase:after(function()
+        if rebase.code ~= 0 then
+            print("Rebase failed, but that's ok.")
+        end
 
         vim.schedule(function()
             emit_on_change("create", path, upstream)
             M.switch_worktree(path)
         end)
-
     end)
-
-    create:after_failure(failure(create.args, git_worktree_root))
-    fetch:after_failure(failure(fetch.args, worktree_path))
-    set_branch:after_failure(failure(set_branch.args, worktree_path))
-    rebase:after_failure(failure(rebase.args, worktree_path))
 
     create:start()
 end
