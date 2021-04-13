@@ -19,20 +19,20 @@ Resource your vimrc and execute `PlugInstall` to ensure you have the plugin
 installed.
 
 ### Setup
-Here is the setup function.
-
 #### Options
 `update_on_change`: Updates the current buffer to point to the new work tree if
 the file is found in the new project, else it will open up `:Ex` at the
 worktree root
 
+`clearjumps_on_change`: Everytime you switch branches, your jumplist will be
+cleared so that you don't accidentally go backwards to a different branch and
+edit the wrong files.
+
 ```lua
-M.setup = function(config)
-    config = config or {}
-    M._config = vim.tbl_deep_extend("force", {
-        update_on_change = true
-    }, config)
-end
+require("git-worktree").setup({
+    update_on_change = <boolean> -- default: true,
+    clearjumps_on_change = <boolean> -- default: true,
+})
 ```
 
 ## Usage
@@ -69,7 +69,6 @@ end)
 This means that you can use [harpoon](https://github.com/ThePrimeagen/harpoon)
 or other plugins to perform follow up operations that will help in turbo
 charging your development experience!
-
 
 ### Made with fury
 all plugins are made live on [Twitch](https://twitch.tv/ThePrimeagen) with love
