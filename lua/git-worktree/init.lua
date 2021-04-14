@@ -85,15 +85,21 @@ local function has_worktree(path, cb)
     job:start()
 end
 
-local function failure(from, cmd, path)
+local function failure(from, cmd, path, soft_error)
     return function(e)
-        status:error(string.format(
+        local error_message = string.format(
             "%s Failed: PATH %s CMD %s RES %s, ERR %s",
             from,
             path,
             vim.inspect(cmd),
             vim.inspect(e:result()),
-            vim.inspect(e:stderr_result())))
+            vim.inspect(e:stderr_result()))
+
+        if soft_error then
+            status:status(error_message)
+        else
+            status:error(error_message)
+        end
     end
 end
 
@@ -135,6 +141,17 @@ local function create_worktree(path, upstream, found_branch)
         end
     })
 
+    -- TODO: How to configure origin???  Should upstream ever be the push
+    -- destination?
+    local set_push  = Job:new({
+        'git', 'push', "--set-upstream", "origin", path,
+        cwd = worktree_path,
+        on_start = function()
+            status:next_status("git set_branch")
+        end
+    })
+
+
     local rebase = Job:new({
         'git', 'rebase',
         cwd = worktree_path,
@@ -145,11 +162,17 @@ local function create_worktree(path, upstream, found_branch)
 
     create:and_then_on_success(fetch)
     fetch:and_then_on_success(set_branch)
-    set_branch:and_then_on_success(rebase)
+
+    -- These are "optional" operations.
+    -- We have to figure out how we want to handle these...
+    set_branch:and_then(set_push)
+    set_push:and_then(rebase)
 
     create:after_failure(failure("create_worktree", create.args, git_worktree_root))
     fetch:after_failure(failure("create_worktree", fetch.args, worktree_path))
-    set_branch:after_failure(failure("create_worktree", set_branch.args, worktree_path))
+
+    set_branch:after_failure(failure("create_worktree", set_branch.args, worktree_path, true))
+    set_push:after_failure(failure("create_worktree", set_branch.args, worktree_path, true))
 
     rebase:after(function()
 
