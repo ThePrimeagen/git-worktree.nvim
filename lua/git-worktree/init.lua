@@ -1,5 +1,6 @@
 local Job = require("plenary.job")
 local Path = require("plenary.path")
+local Enum = require("git-worktree.enum")
 
 local Status = require("git-worktree.status")
 
@@ -10,7 +11,7 @@ local on_change_callbacks = {}
 
 local function on_tree_change_handler(op, path, _) -- _ = upstream
     if M._config.update_on_change then
-        if op == "switch" then
+        if op == Enum.Operations.Switch then
             local changed = M.update_current_buffer()
             if not changed then
                 vim.cmd(string.format(":Ex %s", M.get_worktree_path(path)))
@@ -20,14 +21,12 @@ local function on_tree_change_handler(op, path, _) -- _ = upstream
 end
 
 local function emit_on_change(op, path, upstream)
-
     -- TODO: We don't have a way to async update what is running
     status:next_status(string.format("Running post %s callbacks", op))
     on_tree_change_handler(op, path, upstream)
     for idx = 1, #on_change_callbacks do
         on_change_callbacks[idx](op, path, upstream)
     end
-
 end
 
 local function change_dirs(path)
@@ -86,15 +85,21 @@ local function has_worktree(path, cb)
     job:start()
 end
 
-local function failure(from, cmd, path)
+local function failure(from, cmd, path, soft_error)
     return function(e)
-        status:error(string.format(
+        local error_message = string.format(
             "%s Failed: PATH %s CMD %s RES %s, ERR %s",
             from,
             path,
             vim.inspect(cmd),
             vim.inspect(e:result()),
-            vim.inspect(e:stderr_result())))
+            vim.inspect(e:stderr_result()))
+
+        if soft_error then
+            status:status(error_message)
+        else
+            status:error(error_message)
+        end
     end
 end
 
@@ -136,6 +141,17 @@ local function create_worktree(path, upstream, found_branch)
         end
     })
 
+    -- TODO: How to configure origin???  Should upstream ever be the push
+    -- destination?
+    local set_push  = Job:new({
+        'git', 'push', "--set-upstream", "origin", path,
+        cwd = worktree_path,
+        on_start = function()
+            status:next_status("git set_branch")
+        end
+    })
+
+
     local rebase = Job:new({
         'git', 'rebase',
         cwd = worktree_path,
@@ -146,11 +162,17 @@ local function create_worktree(path, upstream, found_branch)
 
     create:and_then_on_success(fetch)
     fetch:and_then_on_success(set_branch)
-    set_branch:and_then_on_success(rebase)
+
+    -- These are "optional" operations.
+    -- We have to figure out how we want to handle these...
+    set_branch:and_then(set_push)
+    set_push:and_then(rebase)
 
     create:after_failure(failure("create_worktree", create.args, git_worktree_root))
     fetch:after_failure(failure("create_worktree", fetch.args, worktree_path))
-    set_branch:after_failure(failure("create_worktree", set_branch.args, worktree_path))
+
+    set_branch:after_failure(failure("create_worktree", set_branch.args, worktree_path, true))
+    set_push:after_failure(failure("create_worktree", set_branch.args, worktree_path, true))
 
     rebase:after(function()
 
@@ -159,7 +181,7 @@ local function create_worktree(path, upstream, found_branch)
         end
 
         vim.schedule(function()
-            emit_on_change("create", path, upstream)
+            emit_on_change(Enum.Operations.Create, path, upstream)
             M.switch_worktree(path)
         end)
     end)
@@ -168,7 +190,7 @@ local function create_worktree(path, upstream, found_branch)
 end
 
 M.create_worktree = function(path, upstream)
-    status:reset(7)
+    status:reset(8)
 
     if upstream == nil then
         error("Please provide an upstream...")
@@ -196,7 +218,7 @@ M.switch_worktree = function(path)
 
         vim.schedule(function()
             change_dirs(path)
-            emit_on_change("switch", path)
+            emit_on_change(Enum.Operations.Switch, path)
         end)
 
     end)
@@ -219,7 +241,7 @@ M.delete_worktree = function(path, force)
 
         local delete = Job:new(cmd)
         delete:after_success(vim.schedule_wrap(function()
-            emit_on_change("delete", path)
+            emit_on_change(Enum.Operations.Delete, path)
         end))
 
         delete:after_failure(failure(cmd, vim.loop.cwd()))
@@ -299,5 +321,6 @@ M.set_status = function(msg)
 end
 
 M.setup()
+M.Operations = Enum.Operations
 
 return M
