@@ -190,7 +190,7 @@ local function create_worktree(path, upstream, found_branch)
 end
 
 M.create_worktree = function(path, upstream)
-    status:reset(7)
+    status:reset(8)
 
     if upstream == nil then
         error("Please provide an upstream...")
