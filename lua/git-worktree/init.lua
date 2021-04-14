@@ -1,4 +1,5 @@
 local Job = require("plenary.job")
+
 local Path = require("plenary.path")
 
 local Status = require("git-worktree.status")
