@@ -103,6 +103,8 @@ local function has_branch(path, cb)
     local found = false
     local job = Job:new({
         'git', 'branch', on_stdout = function(_, data)
+            -- remove  markere on current branch
+            data = data:gsub("*","")
             data = vim.trim(data)
             found = found or data == path
         end,
