@@ -1,4 +1,4 @@
-local Job = require("plenary.job")
+local Path = require("plenary.path")
 local pickers = require("telescope.pickers")
 local finders = require("telescope.finders")
 local actions = require("telescope.actions")
@@ -9,27 +9,27 @@ local gwt = require("git-worktree")
 
 local get_worktree_path = function(prompt_bufnr)
     local selection = action_state.get_selected_entry(prompt_bufnr)
-    local worktree_path = nil
-    for section in selection[1]:gmatch("%[(.*)%]") do
-        worktree_path = section
+    local worktree_line = {}
+    for section in selection[1]:gmatch("%S+") do
+        table.insert(worktree_line, section)
     end
-    return worktree_path
+    local rel_path = Path:new(worktree_line[1])
+    return rel_path:make_relative(gwt.get_root())
 end
 
 local telescope_git_worktree = function(opts)
     opts = opts or {}
     pickers.new({}, {
         prompt_prefix = "Git Worktrees >",
-        finder = finders.new_oneshot_job(
-        vim.tbl_flatten( {
-            "git", "worktree", "list",
-        } ),
-        opts
-        ),
+        finder = finders.new_oneshot_job(vim.tbl_flatten({
+            "git",
+            "worktree",
+            "list",
+        }), opts),
         sorter = conf.generic_sorter({}),
         attach_mappings = function(_, map)
             -- Switch to chosen worktree
-            action_set.select:replace(function(prompt_bufnr, type)
+            action_set.select:replace(function(prompt_bufnr, _)
                 local worktree_path = get_worktree_path(prompt_bufnr)
                 actions.close(prompt_bufnr)
                 if worktree_path ~= nil then
