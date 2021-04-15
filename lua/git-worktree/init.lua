@@ -68,7 +68,8 @@ local function has_worktree(path, cb)
     local found = false
     local job = Job:new({
         'git', 'worktree', 'list', on_stdout = function(_, data)
-            local start = string.find(data, string.format("%s/%s", git_worktree_root, path), 1, true)
+            local worktree_path = string.format("%s"..Path.path.sep.."%s", git_worktree_root, path)
+            local start = string.find(data, worktree_path, 1, true)
 
             -- TODO: This is clearly a hack
             local start_with_head = string.find(data, string.format("[heads/%s]", path), 1, true)
