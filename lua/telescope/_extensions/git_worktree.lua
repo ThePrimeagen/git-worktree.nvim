@@ -33,11 +33,6 @@ local delete_worktree = function(prompt_bufnr, force)
     end
 end
 
-local create_worktree = function(prompt_bufnr)
-    local worktree_path = action_state.get_current_line()
-    actions.close(prompt_bufnr)
-end
-
 local telescope_git_worktree = function(opts)
     opts = opts or {}
     pickers.new({}, {
@@ -61,13 +56,40 @@ local telescope_git_worktree = function(opts)
                 delete_worktree(prompt_bufnr, true)
             end)
 
-            map("i", "<c-e>", create_worktree)
-            map("n", "<c-e>", create_worktree)
-
             return true
         end
     }):find()
 end
 
+local telescope_create_git_worktree = function(opts)
+    opts = opts or {}
+
+    require("telescope.builtin").git_branches(
+        {
+            attach_mappings = function(_)
+
+                actions.select_default:replace(
+                    function(prompt_bufnr, _)
+                        local selected_entry = action_state.get_selected_entry()
+                        actions.close(prompt_bufnr)
+                        if selected_entry ~= nil then
+                            local branch = selected_entry.value
+                            local path = branch:gsub("/", "-")
+                            gwt.create_worktree(path, branch)
+                        end
+                    end)
+
+                -- do we need to replace other default maps?
+
+                return true
+            end
+        })
+end
+
 return require("telescope").register_extension(
-           {exports = {git_worktrees = telescope_git_worktree}})
+           {
+        exports = {
+            git_worktrees = telescope_git_worktree,
+            create_git_worktree = telescope_create_git_worktree
+        }
+    })
