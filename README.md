@@ -19,6 +19,15 @@ Resource your vimrc and execute `PlugInstall` to ensure you have the plugin
 installed.
 
 ### Setup
+
+### Repository
+
+This plugin assumes that you have a `bare` repository setup for your worktrees. Before creating them, be sure you to clone a `bare` version of your repository as shown below:
+
+```
+git clone --bare <upstream>
+```
+
 #### Options
 `update_on_change`: Updates the current buffer to point to the new work tree if
 the file is found in the new project, else it will open up `:Ex` at the
