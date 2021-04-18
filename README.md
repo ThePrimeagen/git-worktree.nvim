@@ -24,7 +24,7 @@ installed.
 the file is found in the new project, else it will open up `:Ex` at the
 worktree root
 
-`clearjumps_on_change`: Everytime you switch branches, your jumplist will be
+`clearjumps_on_change`: Every time you switch branches, your jumplist will be
 cleared so that you don't accidentally go backwards to a different branch and
 edit the wrong files.
 
