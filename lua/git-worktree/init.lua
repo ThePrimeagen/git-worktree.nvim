@@ -9,6 +9,19 @@ local M = {}
 local git_worktree_root = vim.loop.cwd()
 local on_change_callbacks = {}
 
+local function check_is_bare_repo()
+    local job = Job:new({
+        'git', 'config', '--get', 'core.bare'
+    })
+    job:sync()
+
+    local result = job:result()[1]
+
+    if result == "false" then
+        error("This plugin only works with bare repos. Please clone it with '--bare'")
+    end
+end
+
 local function on_tree_change_handler(op, path, _) -- _ = upstream
     if M._config.update_on_change then
         if op == Enum.Operations.Switch then
