@@ -41,7 +41,7 @@ local function change_dirs(path)
     end
 end
 
-local function create_worktree_job(path, found_branch)
+local function create_worktree_job(path, branch, found_branch)
 
     local config = {
         'git', 'worktree', 'add',
@@ -52,10 +52,13 @@ local function create_worktree_job(path, found_branch)
 
     if not found_branch then
         table.insert(config, '-b')
+        table.insert(config, branch)
+        table.insert(config, path)
+    else
+        table.insert(config, path)
+        table.insert(config, branch)
     end
 
-    table.insert(config, path)
-    table.insert(config, path)
     config.cwd = git_worktree_root
 
     return Job:new(config)
@@ -75,7 +78,7 @@ local function has_worktree(path, cb)
                 local worktree_path = Path:new(
                     string.format("%s" .. Path.path.sep .. "%s", git_worktree_root, path)
                 )
-                worktree_path = Path.path.sep .. worktree_path:absolute()
+                worktree_path = worktree_path:absolute()
                 start = string.find(data, worktree_path, 1, true)
             end
 
@@ -114,27 +117,27 @@ local function failure(from, cmd, path, soft_error)
 end
 
 
-local function has_branch(path, cb)
+local function has_branch(branch, cb)
     local found = false
     local job = Job:new({
         'git', 'branch', on_stdout = function(_, data)
             -- remove  markere on current branch
             data = data:gsub("*","")
             data = vim.trim(data)
-            found = found or data == path
+            found = found or data == branch
         end,
         cwd = git_worktree_root,
     })
 
     -- TODO: I really don't want status's spread everywhere... seems bad
-    status:next_status(string.format("Checking for branch %s", path))
+    status:next_status(string.format("Checking for branch %s", branch))
     job:after(function()
         cb(found)
     end):start()
 end
 
 local function create_worktree(path, upstream, found_branch)
-    local create = create_worktree_job(path, found_branch)
+    local create = create_worktree_job(path, upstream, found_branch)
     local worktree_path = Path:new(git_worktree_root, path):absolute()
 
     local fetch = Job:new({
@@ -217,7 +220,7 @@ M.create_worktree = function(path, upstream)
             error("worktree already exists")
         end
 
-        has_branch(path, function(found_branch)
+        has_branch(upstream, function(found_branch)
             create_worktree(path, upstream, found_branch)
         end)
     end)
@@ -229,7 +232,7 @@ M.switch_worktree = function(path)
     has_worktree(path, function(found)
 
         if not found then
-            error("worktree does not exists, please create it first")
+            error("worktree does not exists, please create it first " .. path)
         end
 
         vim.schedule(function()
