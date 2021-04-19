@@ -14,8 +14,7 @@ local get_worktree_path = function(prompt_bufnr)
     for section in selection[1]:gmatch("%S+") do
         table.insert(worktree_line, section)
     end
-    local rel_path = Path:new(worktree_line[1])
-    return rel_path:make_relative(gwt.get_root())
+    return worktree_line[1]
 end
 
 local switch_worktree = function(prompt_bufnr)

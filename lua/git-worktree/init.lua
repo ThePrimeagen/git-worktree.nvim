@@ -67,10 +67,19 @@ local function has_worktree(path, cb)
     local found = false
     local job = Job:new({
         'git', 'worktree', 'list', on_stdout = function(_, data)
-            local worktree_path = string.format("%s"..Path.path.sep.."%s", git_worktree_root, path)
-            local start = string.find(data, worktree_path, 1, true)
+            local start
+            local plenary_path = Path:new(path)
+            if plenary_path:is_absolute() then
+                start = string.find(data, path, 1, true)
+            else
+                local worktree_path = Path:new(
+                    string.format("%s" .. Path.path.sep .. "%s", git_worktree_root, path)
+                )
+                worktree_path = Path.path.sep .. worktree_path:absolute()
+                start = string.find(data, worktree_path, 1, true)
+            end
 
-            -- TODO: This is clearly a hack
+            -- TODO: This is clearly a hack (do not think we need this anymore?)
             local start_with_head = string.find(data, string.format("[heads/%s]", path), 1, true)
             found = found or start or start_with_head
         end,
@@ -312,7 +321,11 @@ M.get_root = function()
 end
 
 M.get_worktree_path = function(path)
-    return Path:new(git_worktree_root, path):absolute()
+    if Path:new(path):is_absolute() then
+        return path
+    else
+        return Path:new(git_worktree_root, path):absolute()
+    end
 end
 
 M.setup = function(config)
