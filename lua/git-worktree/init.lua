@@ -166,16 +166,20 @@ local function create_worktree(path, upstream, found_branch)
     create:and_then_on_success(fetch)
     fetch:and_then_on_success(set_branch)
 
-    -- These are "optional" operations.
-    -- We have to figure out how we want to handle these...
-    set_branch:and_then(set_push)
-    set_push:and_then(rebase)
+    if M._config.autopush then
+      -- These are "optional" operations.
+      -- We have to figure out how we want to handle these...
+      set_branch:and_then(set_push)
+      set_push:and_then(rebase)
+      set_push:after_failure(failure("create_worktree", set_branch.args, worktree_path, true))
+    else
+      set_branch:and_then(rebase)
+    end
 
     create:after_failure(failure("create_worktree", create.args, git_worktree_root))
     fetch:after_failure(failure("create_worktree", fetch.args, worktree_path))
 
     set_branch:after_failure(failure("create_worktree", set_branch.args, worktree_path, true))
-    set_push:after_failure(failure("create_worktree", set_branch.args, worktree_path, true))
 
     rebase:after(function()
 
@@ -316,6 +320,8 @@ M.setup = function(config)
     M._config = vim.tbl_deep_extend("force", {
         update_on_change = true,
         clearjumps_on_change = true,
+        -- should this default to true or false?
+        autopush = false,
     }, config)
 end
 
