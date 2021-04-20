@@ -1,0 +1,7 @@
+0000000000000000000000000000000000000000 2afa41f6d9a4e4dc25e9088e402fe7ba35b95a10 Brian Ryall <brian.ryall@udri.udayton.edu> 1618845228 -0400	commit (initial): checkin file A
+2afa41f6d9a4e4dc25e9088e402fe7ba35b95a10 2afa41f6d9a4e4dc25e9088e402fe7ba35b95a10 Brian Ryall <brian.ryall@udri.udayton.edu> 1618942099 -0400	checkout: moving from master to featB
+2afa41f6d9a4e4dc25e9088e402fe7ba35b95a10 39ba5d897e269fb97a17058423947603f010e702 Brian Ryall <brian.ryall@udri.udayton.edu> 1618942143 -0400	commit: checkin file B
+39ba5d897e269fb97a17058423947603f010e702 2afa41f6d9a4e4dc25e9088e402fe7ba35b95a10 Brian Ryall <brian.ryall@udri.udayton.edu> 1618942158 -0400	checkout: moving from featB to master
+2afa41f6d9a4e4dc25e9088e402fe7ba35b95a10 2afa41f6d9a4e4dc25e9088e402fe7ba35b95a10 Brian Ryall <brian.ryall@udri.udayton.edu> 1618942179 -0400	checkout: moving from master to featC
+2afa41f6d9a4e4dc25e9088e402fe7ba35b95a10 3b73d17c51c9b22ff9d4552e5bb56927776173b3 Brian Ryall <brian.ryall@udri.udayton.edu> 1618942208 -0400	commit: checkin file C
+3b73d17c51c9b22ff9d4552e5bb56927776173b3 2afa41f6d9a4e4dc25e9088e402fe7ba35b95a10 Brian Ryall <brian.ryall@udri.udayton.edu> 1618942221 -0400	checkout: moving from featC to master
