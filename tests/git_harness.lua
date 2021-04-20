@@ -3,12 +3,16 @@ local git_worktree = require('git-worktree')
 local M = {}
 
 local prepare_origin_repo = function(dir)
-    vim.api.nvim_exec('!cp -r tests/repo_origin/ /tmp/' .. dir, true)
+    vim.api.nvim_exec('!cp -r tests/repo_origin /tmp/' .. dir, true)
     vim.api.nvim_exec('!mv /tmp/'..dir..'/.git-orig /tmp/'..dir..'/.git', true)
 end
 
 local prepare_bare_repo = function(dir, origin_dir)
     vim.api.nvim_exec('!git clone --bare /tmp/'..origin_dir..' /tmp/'..dir, true)
+end
+
+local prepare_repo = function(dir, origin_dir)
+    vim.api.nvim_exec('!git clone /tmp/'..origin_dir..' /tmp/'..dir, true)
 end
 
 local change_dir = function(dir)
@@ -17,7 +21,7 @@ local change_dir = function(dir)
 end
 
 local cleanup_repo = function(dir)
-    vim.api.nvim_exec('silent !rm -rf /tmp/' .. dir, true)
+    vim.api.nvim_exec('silent !rm -rf /tmp/'..dir, true)
 end
 
 local create_worktree = function(folder_path, commitish)
@@ -53,8 +57,36 @@ function M.in_bare_repo_from_origin_no_worktrees(cb)
 
         reset_cwd()
 
-        cleanup_repo(origin_repo_dir)
         cleanup_repo(bare_repo_dir)
+        cleanup_repo(origin_repo_dir)
+
+        if err ~= nil then
+            error(err)
+        end
+
+    end
+end
+
+function M.in_repo_from_origin_no_worktrees(cb)
+    return function()
+        local origin_repo_dir = 'git_worktree_test_origin_repo'
+        local repo_dir = 'git_worktree_test_repo'
+        local feat_dir = 'git_worktree_test_repo_featB'
+
+        config_git_worktree()
+
+        prepare_origin_repo(origin_repo_dir)
+        prepare_repo(repo_dir, origin_repo_dir)
+
+        change_dir(repo_dir)
+
+        local _, err = pcall(cb)
+
+        reset_cwd()
+
+        cleanup_repo(repo_dir)
+        cleanup_repo(origin_repo_dir)
+        cleanup_repo(feat_dir)
 
         if err ~= nil then
             error(err)
@@ -79,8 +111,37 @@ function M.in_bare_repo_from_origin_1_worktree(cb)
 
         reset_cwd()
 
-        cleanup_repo(origin_repo_dir)
         cleanup_repo(bare_repo_dir)
+        cleanup_repo(origin_repo_dir)
+
+        if err ~= nil then
+            error(err)
+        end
+
+    end
+end
+
+function M.in_repo_from_origin_1_worktree(cb)
+    return function()
+        local origin_repo_dir = 'git_worktree_test_origin_repo'
+        local repo_dir = 'git_worktree_test_repo'
+        local feat_dir = 'git_worktree_test_repo_featB'
+
+        config_git_worktree()
+
+        prepare_origin_repo(origin_repo_dir)
+        prepare_repo(repo_dir, origin_repo_dir)
+        change_dir(repo_dir)
+
+        create_worktree('../git_worktree_test_repo_featB','featB')
+
+        local _, err = pcall(cb)
+
+        reset_cwd()
+
+        cleanup_repo(repo_dir)
+        cleanup_repo(origin_repo_dir)
+        cleanup_repo(feat_dir)
 
         if err ~= nil then
             error(err)

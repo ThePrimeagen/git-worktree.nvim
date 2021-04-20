@@ -33,8 +33,12 @@ local function change_dirs(path)
     local worktree_path = M.get_worktree_path(path)
 
     -- vim.loop.chdir(worktree_path)
-    local cmd = string.format("cd %s", worktree_path)
-    vim.cmd(cmd)
+    if Path:new(worktree_path):exists() then
+        local cmd = string.format("cd %s", worktree_path)
+        vim.cmd(cmd)
+    else
+        status:error('Could not chang to directory: ' ..worktree_path)
+    end
 
     if M._config.clearjumps_on_change then
         vim.cmd("clearjumps")
@@ -68,10 +72,11 @@ end
 -- communication.  That should be doable here in the near future
 local function has_worktree(path, cb)
     local found = false
+    local plenary_path = Path:new(path)
+
     local job = Job:new({
         'git', 'worktree', 'list', on_stdout = function(_, data)
             local start
-            local plenary_path = Path:new(path)
             if plenary_path:is_absolute() then
                 start = string.find(data, path, 1, true)
             else
@@ -95,7 +100,11 @@ local function has_worktree(path, cb)
 
     -- TODO: I really don't want status's spread everywhere... seems bad
     status:next_status("Checking for worktree")
-    job:start()
+    if Path:new(git_worktree_root):exists() then
+        job:start()
+    else
+        status:error("git_worktree_root does not exist")
+    end
 end
 
 local function failure(from, cmd, path, soft_error)
@@ -210,6 +219,7 @@ end
 
 M.create_worktree = function(path, upstream)
     status:reset(8)
+    status:status("Creating Worktree")
 
     if upstream == nil then
         error("Please provide an upstream...")
@@ -229,6 +239,7 @@ end
 
 M.switch_worktree = function(path)
     status:reset(2)
+    status:status("Switching Worktree")
     has_worktree(path, function(found)
 
         if not found then
@@ -245,6 +256,7 @@ end
 
 M.delete_worktree = function(path, force)
     status:reset(2)
+    status:status("Deleting Worktree")
     has_worktree(path, function(found)
         if not found then
             error(string.format("Worktree %s does not exist", path))
