@@ -22,7 +22,7 @@ installed.
 
 ### Repository
 
-This plugin assumes that you have a `bare` repository setup for your worktrees. Before creating them, be sure you to clone a `bare` version of your repository as shown below:
+Currently, this plugin assumes that you have a `bare` repository setup for your worktrees. Before creating them, be sure you to clone a `bare` version of your repository as shown below. In the future, this will be handled automatically by the plugin.
 
 ```
 git clone --bare <upstream>
