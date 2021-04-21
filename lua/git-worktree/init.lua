@@ -100,11 +100,7 @@ local function has_worktree(path, cb)
 
     -- TODO: I really don't want status's spread everywhere... seems bad
     status:next_status("Checking for worktree")
-    if Path:new(git_worktree_root):exists() then
-        job:start()
-    else
-        status:error("git_worktree_root does not exist")
-    end
+    job:start()
 end
 
 local function failure(from, cmd, path, soft_error)
@@ -147,7 +143,13 @@ end
 
 local function create_worktree(path, upstream, found_branch)
     local create = create_worktree_job(path, upstream, found_branch)
-    local worktree_path = Path:new(git_worktree_root, path):absolute()
+
+    local worktree_path
+    if Path:new(path):is_absolute() then
+        worktree_path = path
+    else
+        worktree_path = Path:new(git_worktree_root, path):absolute()
+    end
 
     local fetch = Job:new({
         'git', 'fetch', '--all',
@@ -222,12 +224,12 @@ M.create_worktree = function(path, upstream)
     status:status("Creating Worktree")
 
     if upstream == nil then
-        error("Please provide an upstream...")
+        status:error("Please provide an upstream...")
     end
 
     has_worktree(path, function(found)
         if found then
-            error("worktree already exists")
+            status:error("worktree already exists")
         end
 
         has_branch(upstream, function(found_branch)
@@ -243,7 +245,7 @@ M.switch_worktree = function(path)
     has_worktree(path, function(found)
 
         if not found then
-            error("worktree does not exists, please create it first " .. path)
+            status:error("worktree does not exists, please create it first " .. path)
         end
 
         vim.schedule(function()
@@ -259,7 +261,7 @@ M.delete_worktree = function(path, force)
     status:status("Deleting Worktree")
     has_worktree(path, function(found)
         if not found then
-            error(string.format("Worktree %s does not exist", path))
+            status:error(string.format("Worktree %s does not exist", path))
         end
 
         local cmd = {

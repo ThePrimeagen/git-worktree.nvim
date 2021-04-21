@@ -3,7 +3,7 @@ local git_worktree = require('git-worktree')
 local M = {}
 
 local prepare_origin_repo = function(dir)
-    vim.api.nvim_exec('!cp -r tests/repo_origin /tmp/' .. dir, true)
+    vim.api.nvim_exec('!cp -r tests/repo_origin/ /tmp/' .. dir, true)
     vim.api.nvim_exec('!mv /tmp/'..dir..'/.git-orig /tmp/'..dir..'/.git', true)
 end
 
@@ -15,13 +15,23 @@ local prepare_repo = function(dir, origin_dir)
     vim.api.nvim_exec('!git clone /tmp/'..origin_dir..' /tmp/'..dir, true)
 end
 
+local random_string = function()
+    math.randomseed(os.clock()^5)
+    local ret = ""
+    for _ = 1, 5 do
+        local random_char = math.random(97,122)
+        ret = ret .. string.char(random_char)
+    end
+    return ret
+end
+
 local change_dir = function(dir)
     vim.api.nvim_set_current_dir('/tmp/'..dir)
     git_worktree.set_worktree_root('/tmp/'..dir)
 end
 
-local cleanup_repo = function(dir)
-    vim.api.nvim_exec('silent !rm -rf /tmp/'..dir, true)
+local cleanup_repos = function()
+    vim.api.nvim_exec('silent !rm -rf /tmp/git_worktree_test*', true)
 end
 
 local create_worktree = function(folder_path, commitish)
@@ -44,9 +54,10 @@ end
 function M.in_bare_repo_from_origin_no_worktrees(cb)
     return function()
         local origin_repo_dir = 'git_worktree_test_origin_repo'
-        local bare_repo_dir = 'git_worktree_test_repo'
+        local bare_repo_dir = 'git_worktree_test_repo_' .. random_string()
 
         config_git_worktree()
+        cleanup_repos()
 
         prepare_origin_repo(origin_repo_dir)
         prepare_bare_repo(bare_repo_dir, origin_repo_dir)
@@ -57,8 +68,7 @@ function M.in_bare_repo_from_origin_no_worktrees(cb)
 
         reset_cwd()
 
-        cleanup_repo(bare_repo_dir)
-        cleanup_repo(origin_repo_dir)
+        cleanup_repos()
 
         if err ~= nil then
             error(err)
@@ -70,10 +80,10 @@ end
 function M.in_repo_from_origin_no_worktrees(cb)
     return function()
         local origin_repo_dir = 'git_worktree_test_origin_repo'
-        local repo_dir = 'git_worktree_test_repo'
-        local feat_dir = 'git_worktree_test_repo_featB'
+        local repo_dir = 'git_worktree_test_repo' .. random_string()
 
         config_git_worktree()
+        cleanup_repos()
 
         prepare_origin_repo(origin_repo_dir)
         prepare_repo(repo_dir, origin_repo_dir)
@@ -84,9 +94,7 @@ function M.in_repo_from_origin_no_worktrees(cb)
 
         reset_cwd()
 
-        cleanup_repo(repo_dir)
-        cleanup_repo(origin_repo_dir)
-        cleanup_repo(feat_dir)
+        cleanup_repos()
 
         if err ~= nil then
             error(err)
@@ -98,9 +106,10 @@ end
 function M.in_bare_repo_from_origin_1_worktree(cb)
     return function()
         local origin_repo_dir = 'git_worktree_test_origin_repo'
-        local bare_repo_dir = 'git_worktree_test_repo'
+        local bare_repo_dir = 'git_worktree_test_repo' .. random_string()
 
         config_git_worktree()
+        cleanup_repos()
 
         prepare_origin_repo(origin_repo_dir)
         prepare_bare_repo(bare_repo_dir, origin_repo_dir)
@@ -111,8 +120,7 @@ function M.in_bare_repo_from_origin_1_worktree(cb)
 
         reset_cwd()
 
-        cleanup_repo(bare_repo_dir)
-        cleanup_repo(origin_repo_dir)
+        cleanup_repos()
 
         if err ~= nil then
             error(err)
@@ -124,24 +132,24 @@ end
 function M.in_repo_from_origin_1_worktree(cb)
     return function()
         local origin_repo_dir = 'git_worktree_test_origin_repo'
-        local repo_dir = 'git_worktree_test_repo'
-        local feat_dir = 'git_worktree_test_repo_featB'
+        local random_str = random_string()
+        local repo_dir = 'git_worktree_test_repo' .. random_str
+        local feat_dir = 'git_worktree_test_repo_featB' .. random_str
 
         config_git_worktree()
+        cleanup_repos()
 
         prepare_origin_repo(origin_repo_dir)
         prepare_repo(repo_dir, origin_repo_dir)
         change_dir(repo_dir)
 
-        create_worktree('../git_worktree_test_repo_featB','featB')
+        create_worktree('../'..feat_dir,'featB')
 
         local _, err = pcall(cb)
 
         reset_cwd()
 
-        cleanup_repo(repo_dir)
-        cleanup_repo(origin_repo_dir)
-        cleanup_repo(feat_dir)
+        cleanup_repos()
 
         if err ~= nil then
             error(err)

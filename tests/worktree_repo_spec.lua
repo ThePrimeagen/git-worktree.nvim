@@ -54,7 +54,8 @@ describe('git-worktree non bare repo', function()
             end
         end)
 
-        git_worktree.switch_worktree("../git_worktree_test_repo_featB")
+        local random_str = git_worktree.get_root():sub(git_worktree.get_root():len()-4)
+        git_worktree.switch_worktree("../git_worktree_test_repo_featB"..random_str)
 
         vim.fn.wait(
             10000,
@@ -66,7 +67,7 @@ describe('git-worktree non bare repo', function()
 
         git_worktree:reset()
 
-        local expected_path = Path:new(git_worktree:get_root() .. '/../git_worktree_test_repo_featB'):normalize()
+        local expected_path = Path:new(git_worktree:get_root() .. '/../git_worktree_test_repo_featB'..random_str):normalize()
         assert.are.same(vim.loop.cwd(), expected_path)
     end))
 
@@ -79,7 +80,8 @@ describe('git-worktree non bare repo', function()
             end
         end)
 
-        git_worktree.delete_worktree("../git_worktree_test_repo_featB")
+        local random_str = git_worktree.get_root():sub(git_worktree.get_root():len()-4)
+        git_worktree.delete_worktree("../git_worktree_test_repo_featB"..random_str,true)
 
         vim.fn.wait(
             10000,
