@@ -47,25 +47,26 @@ end
 
 local function create_worktree_job(path, branch, found_branch)
 
-    local config = {
-        'git', 'worktree', 'add',
-        on_start = function()
-            status:next_status("git worktree add")
-        end
-    }
+    local worktree_add_cmd = 'git'
+    local worktree_add_args = {'worktree', 'add'}
 
     if not found_branch then
-        table.insert(config, '-b')
-        table.insert(config, branch)
-        table.insert(config, path)
+        table.insert(worktree_add_args, '-b')
+        table.insert(worktree_add_args, branch)
+        table.insert(worktree_add_args, path)
     else
-        table.insert(config, path)
-        table.insert(config, branch)
+        table.insert(worktree_add_args, path)
+        table.insert(worktree_add_args, branch)
     end
 
-    config.cwd = git_worktree_root
-
-    return Job:new(config)
+    return Job:new({
+        command = worktree_add_cmd,
+        args = worktree_add_args,
+        cwd = git_worktree_root,
+        on_start = function()
+            status:next_status(worktree_add_cmd .. " " .. table.concat(worktree_add_args, " "))
+        end
+    })
 end
 
 -- A lot of this could be cleaned up if there was better job -> job -> function
@@ -99,7 +100,7 @@ local function has_worktree(path, cb)
     end)
 
     -- TODO: I really don't want status's spread everywhere... seems bad
-    status:next_status("Checking for worktree")
+    status:next_status("Checking for worktree " .. path)
     job:start()
 end
 
@@ -137,12 +138,13 @@ local function has_branch(branch, cb)
     -- TODO: I really don't want status's spread everywhere... seems bad
     status:next_status(string.format("Checking for branch %s", branch))
     job:after(function()
+        status:status("found branch: " .. tostring(found))
         cb(found)
     end):start()
 end
 
-local function create_worktree(path, upstream, found_branch)
-    local create = create_worktree_job(path, upstream, found_branch)
+local function create_worktree(path, branch, upstream, found_branch)
+    local create = create_worktree_job(path, branch, found_branch)
 
     local worktree_path
     if Path:new(path):is_absolute() then
@@ -159,24 +161,29 @@ local function create_worktree(path, upstream, found_branch)
         end
     })
 
+    local set_branch_cmd = 'git'
+    local set_branch_args= {'branch', string.format('--set-upstream-to=%s/%s', upstream, branch)}
     local set_branch = Job:new({
-        'git', 'branch', string.format('--set-upstream-to=%s', upstream), path,
+        command = set_branch_cmd,
+        args = set_branch_args,
         cwd = worktree_path,
         on_start = function()
-            status:next_status("git set_branch")
+            status:next_status(set_branch_cmd .. " " .. table.concat(set_branch_args, " "))
         end
     })
 
     -- TODO: How to configure origin???  Should upstream ever be the push
     -- destination?
+    local set_push_cmd = 'git'
+    local set_push_args = {'push', "--set-upstream", upstream,  branch, path}
     local set_push  = Job:new({
-        'git', 'push', "--set-upstream", "origin", path,
+        command = set_push_cmd,
+        args = set_push_args,
         cwd = worktree_path,
         on_start = function()
-            status:next_status("git set_branch")
+            status:next_status(set_push_cmd .. " " .. table.concat(set_push_args, " "))
         end
     })
-
 
     local rebase = Job:new({
         'git', 'rebase',
@@ -219,21 +226,17 @@ local function create_worktree(path, upstream, found_branch)
     create:start()
 end
 
-M.create_worktree = function(path, upstream)
+M.create_worktree = function(path, branch, upstream)
     status:reset(8)
-    status:status("Creating Worktree")
-
-    if upstream == nil then
-        status:error("Please provide an upstream...")
-    end
+    status:status("Creating Worktree at " .. path .. " on branch " .. branch .. "for upstream " .. upstream)
 
     has_worktree(path, function(found)
         if found then
             status:error("worktree already exists")
         end
 
-        has_branch(upstream, function(found_branch)
-            create_worktree(path, upstream, found_branch)
+        has_branch(branch, function(found_branch)
+            create_worktree(path, branch, upstream, found_branch)
         end)
     end)
 

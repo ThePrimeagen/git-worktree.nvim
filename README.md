@@ -28,6 +28,18 @@ Currently, this plugin assumes that you have a `bare` repository setup for your 
 git clone --bare <upstream>
 ```
 
+### Troubleshooting
+If the upstream is not setup correctly when trying to pull or push, make sure the following command returns what is shown below. This seems to happen with the gitHub cli.
+```
+git config --get remote.origin.fetch
+
++refs/heads/*:refs/remotes/origin/*
+```
+if it does not run the following
+```
+git config remote.origin.fetch "+refs/heads/*:refs/remotes/origin/*"
+```
+
 #### Options
 `update_on_change`: Updates the current buffer to point to the new work tree if
 the file is found in the new project, else it will open up `:Ex` at the
