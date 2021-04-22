@@ -12,9 +12,9 @@ end
 
 return {
     Operations = Enum({
-        Create   = "create",
+        Create = "create",
         Switch = "switch",
-        Delete  = "delete",
+        Delete = "delete",
     })
 }
 
