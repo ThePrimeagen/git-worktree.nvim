@@ -7,6 +7,7 @@ fix that).
 <!-- mdformat-toc start --slug=github --maxlevel=6 --minlevel=1 -->
 
 - [git-worktree.nvim](#git-worktreenvim)
+  - [Known Issues](#known-issues)
   - [Dependencies](#dependencies)
   - [Getting Started](#getting-started)
   - [Setup](#setup)
@@ -18,6 +19,9 @@ fix that).
   - [Made with fury](#made-with-fury)
 
 <!-- mdformat-toc end -->
+
+## Known Issues<a name="known-issues"></a>
+There are a few known issues.  I'll try to be actively filing them in the issues.  If you experience something and its not an issue, feel free to make an issue!  Even if its a dupe I am just happy for the contribution.  
 
 ## Dependencies<a name="dependencies"></a>
 
@@ -38,11 +42,13 @@ installed.
 
 ## Repository<a name="repository"></a>
 
-Currently, this plugin assumes that you have a `bare` repository setup for your worktrees. Before creating them, be sure to clone a `bare` version of your repository, as shown below. In the future, this will be handled automatically by the plugin.
+This repository does work best with a bare repo.  To clone a bare repo, do the following.
 
 ```shell
 git clone --bare <upstream>
 ```
+
+If you do not use a bare repo, using telescope create command will be more helpful in the process of creating a branch.
 
 ### Troubleshooting
 If the upstream is not setup correctly when trying to pull or push, make sure the following command returns what is shown below. This seems to happen with the gitHub cli.
