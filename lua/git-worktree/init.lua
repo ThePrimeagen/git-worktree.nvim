@@ -33,44 +33,62 @@ local function change_dirs(path)
     local worktree_path = M.get_worktree_path(path)
 
     -- vim.loop.chdir(worktree_path)
-    local cmd = string.format("cd %s", worktree_path)
-    vim.cmd(cmd)
+    if Path:new(worktree_path):exists() then
+        local cmd = string.format("cd %s", worktree_path)
+        vim.cmd(cmd)
+    else
+        error('Could not chang to directory: ' ..worktree_path)
+    end
 
     if M._config.clearjumps_on_change then
         vim.cmd("clearjumps")
     end
 end
 
-local function create_worktree_job(path, found_branch)
+local function create_worktree_job(path, branch, found_branch)
 
-    local config = {
-        'git', 'worktree', 'add',
-        on_start = function()
-            status:next_status("git worktree add")
-        end
-    }
+    local worktree_add_cmd = 'git'
+    local worktree_add_args = {'worktree', 'add'}
 
     if not found_branch then
-        table.insert(config, '-b')
+        table.insert(worktree_add_args, '-b')
+        table.insert(worktree_add_args, branch)
+        table.insert(worktree_add_args, path)
+    else
+        table.insert(worktree_add_args, path)
+        table.insert(worktree_add_args, branch)
     end
 
-    table.insert(config, path)
-    table.insert(config, path)
-    config.cwd = git_worktree_root
-
-    return Job:new(config)
+    return Job:new({
+        command = worktree_add_cmd,
+        args = worktree_add_args,
+        cwd = git_worktree_root,
+        on_start = function()
+            status:next_status(worktree_add_cmd .. " " .. table.concat(worktree_add_args, " "))
+        end
+    })
 end
 
 -- A lot of this could be cleaned up if there was better job -> job -> function
 -- communication.  That should be doable here in the near future
 local function has_worktree(path, cb)
     local found = false
+    local plenary_path = Path:new(path)
+
     local job = Job:new({
         'git', 'worktree', 'list', on_stdout = function(_, data)
-            local worktree_path = string.format("%s"..Path.path.sep.."%s", git_worktree_root, path)
-            local start = string.find(data, worktree_path, 1, true)
+            local start
+            if plenary_path:is_absolute() then
+                start = string.find(data, path, 1, true)
+            else
+                local worktree_path = Path:new(
+                    string.format("%s" .. Path.path.sep .. "%s", git_worktree_root, path)
+                )
+                worktree_path = worktree_path:absolute()
+                start = string.find(data, worktree_path, 1, true)
+            end
 
-            -- TODO: This is clearly a hack
+            -- TODO: This is clearly a hack (do not think we need this anymore?)
             local start_with_head = string.find(data, string.format("[heads/%s]", path), 1, true)
             found = found or start or start_with_head
         end,
@@ -82,7 +100,7 @@ local function has_worktree(path, cb)
     end)
 
     -- TODO: I really don't want status's spread everywhere... seems bad
-    status:next_status("Checking for worktree")
+    status:next_status("Checking for worktree " .. path)
     job:start()
 end
 
@@ -99,34 +117,59 @@ local function failure(from, cmd, path, soft_error)
         if soft_error then
             status:status(error_message)
         else
-            status:error(error_message)
+            error(error_message)
         end
     end
 end
 
+local function has_origin()
+    local found = false
+    local job = Job:new({
+        'git', 'remote', 'show',
+        on_stdout = function(_, data)
+            data = vim.trim(data)
+            found = found or data == 'origin'
+        end,
+        cwd = git_worktree_root,
+    })
 
-local function has_branch(path, cb)
+    -- TODO: I really don't want status's spread everywhere... seems bad
+    job:after(function()
+        status:status("found origin: " .. tostring(found))
+    end):sync()
+
+    return found
+end
+
+local function has_branch(branch, cb)
     local found = false
     local job = Job:new({
         'git', 'branch', on_stdout = function(_, data)
             -- remove  markere on current branch
             data = data:gsub("*","")
             data = vim.trim(data)
-            found = found or data == path
+            found = found or data == branch
         end,
         cwd = git_worktree_root,
     })
 
     -- TODO: I really don't want status's spread everywhere... seems bad
-    status:next_status(string.format("Checking for branch %s", path))
+    status:next_status(string.format("Checking for branch %s", branch))
     job:after(function()
+        status:status("found branch: " .. tostring(found))
         cb(found)
     end):start()
 end
 
-local function create_worktree(path, upstream, found_branch)
-    local create = create_worktree_job(path, found_branch)
-    local worktree_path = Path:new(git_worktree_root, path):absolute()
+local function create_worktree(path, branch, upstream, found_branch)
+    local create = create_worktree_job(path, branch, found_branch)
+
+    local worktree_path
+    if Path:new(path):is_absolute() then
+        worktree_path = path
+    else
+        worktree_path = Path:new(git_worktree_root, path):absolute()
+    end
 
     local fetch = Job:new({
         'git', 'fetch', '--all',
@@ -136,24 +179,29 @@ local function create_worktree(path, upstream, found_branch)
         end
     })
 
+    local set_branch_cmd = 'git'
+    local set_branch_args= {'branch', string.format('--set-upstream-to=%s/%s', upstream, branch)}
     local set_branch = Job:new({
-        'git', 'branch', string.format('--set-upstream-to=%s', upstream), path,
+        command = set_branch_cmd,
+        args = set_branch_args,
         cwd = worktree_path,
         on_start = function()
-            status:next_status("git set_branch")
+            status:next_status(set_branch_cmd .. " " .. table.concat(set_branch_args, " "))
         end
     })
 
     -- TODO: How to configure origin???  Should upstream ever be the push
     -- destination?
+    local set_push_cmd = 'git'
+    local set_push_args = {'push', "--set-upstream", upstream,  branch, path}
     local set_push  = Job:new({
-        'git', 'push', "--set-upstream", "origin", path,
+        command = set_push_cmd,
+        args = set_push_args,
         cwd = worktree_path,
         on_start = function()
-            status:next_status("git set_branch")
+            status:next_status(set_push_cmd .. " " .. table.concat(set_push_args, " "))
         end
     })
-
 
     local rebase = Job:new({
         'git', 'rebase',
@@ -163,44 +211,55 @@ local function create_worktree(path, upstream, found_branch)
         end
     })
 
-    create:and_then_on_success(fetch)
-    fetch:and_then_on_success(set_branch)
+    if upstream ~= nil then
+        create:and_then_on_success(fetch)
+        fetch:and_then_on_success(set_branch)
 
-    if M._config.autopush then
-      -- These are "optional" operations.
-      -- We have to figure out how we want to handle these...
-      set_branch:and_then(set_push)
-      set_push:and_then(rebase)
-      set_push:after_failure(failure("create_worktree", set_branch.args, worktree_path, true))
-    else
-      set_branch:and_then(rebase)
-    end
-
-    create:after_failure(failure("create_worktree", create.args, git_worktree_root))
-    fetch:after_failure(failure("create_worktree", fetch.args, worktree_path))
-
-    set_branch:after_failure(failure("create_worktree", set_branch.args, worktree_path, true))
-
-    rebase:after(function()
-
-        if rebase.code ~= 0 then
-            status:status("Rebase failed, but that's ok.")
+        if M._config.autopush then
+            -- These are "optional" operations.
+            -- We have to figure out how we want to handle these...
+            set_branch:and_then(set_push)
+            set_push:and_then(rebase)
+            set_push:after_failure(failure("create_worktree", set_branch.args, worktree_path, true))
+        else
+            set_branch:and_then(rebase)
         end
 
-        vim.schedule(function()
-            emit_on_change(Enum.Operations.Create, path, upstream)
-            M.switch_worktree(path)
+        create:after_failure(failure("create_worktree", create.args, git_worktree_root))
+        fetch:after_failure(failure("create_worktree", fetch.args, worktree_path))
+
+        set_branch:after_failure(failure("create_worktree", set_branch.args, worktree_path, true))
+
+        rebase:after(function()
+
+            if rebase.code ~= 0 then
+                status:status("Rebase failed, but that's ok.")
+            end
+
+            vim.schedule(function()
+                emit_on_change(Enum.Operations.Create, path, upstream)
+                M.switch_worktree(path)
+            end)
         end)
-    end)
+    else
+        create:after(function()
+            vim.schedule(function()
+                emit_on_change(Enum.Operations.Create, path, upstream)
+                M.switch_worktree(path)
+            end)
+        end)
+    end
 
     create:start()
 end
 
-M.create_worktree = function(path, upstream)
+M.create_worktree = function(path, branch, upstream)
     status:reset(8)
 
     if upstream == nil then
-        error("Please provide an upstream...")
+        if has_origin() then
+            upstream = "origin"
+        end
     end
 
     has_worktree(path, function(found)
@@ -208,8 +267,8 @@ M.create_worktree = function(path, upstream)
             error("worktree already exists")
         end
 
-        has_branch(path, function(found_branch)
-            create_worktree(path, upstream, found_branch)
+        has_branch(branch, function(found_branch)
+            create_worktree(path, branch, upstream, found_branch)
         end)
     end)
 
@@ -220,7 +279,7 @@ M.switch_worktree = function(path)
     has_worktree(path, function(found)
 
         if not found then
-            error("worktree does not exists, please create it first")
+            error("worktree does not exists, please create it first " .. path)
         end
 
         vim.schedule(function()
@@ -312,7 +371,11 @@ M.get_root = function()
 end
 
 M.get_worktree_path = function(path)
-    return Path:new(git_worktree_root, path):absolute()
+    if Path:new(path):is_absolute() then
+        return path
+    else
+        return Path:new(git_worktree_root, path):absolute()
+    end
 end
 
 M.setup = function(config)
