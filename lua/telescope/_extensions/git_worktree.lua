@@ -6,7 +6,7 @@ local actions = require("telescope.actions")
 local action_set = require("telescope.actions.set")
 local action_state = require("telescope.actions.state")
 local conf = require("telescope.config").values
-local gwt = require("git-worktree")
+local git_worktree = require("git-worktree")
 
 local get_worktree_path = function(prompt_bufnr)
     local selection = action_state.get_selected_entry(prompt_bufnr)
@@ -21,7 +21,7 @@ local switch_worktree = function(prompt_bufnr)
     local worktree_path = get_worktree_path(prompt_bufnr)
     actions.close(prompt_bufnr)
     if worktree_path ~= nil then
-        gwt.switch_worktree(worktree_path)
+        git_worktree.switch_worktree(worktree_path)
     end
 end
 
@@ -29,7 +29,7 @@ local delete_worktree = function(prompt_bufnr, force)
     local worktree_path = get_worktree_path(prompt_bufnr)
     actions.close(prompt_bufnr)
     if worktree_path ~= nil then
-        gwt.delete_worktree(worktree_path, force)
+        git_worktree.delete_worktree(worktree_path, force)
     end
 end
 
@@ -53,7 +53,7 @@ local create_worktree = function()
                                 vim.api.nvim_win_close(window.win_id, true)
                                 vim.api.nvim_buf_delete(window.bufnr, {force = true})
                                 if text ~= "" then
-                                    gwt.create_worktree(text, branch)
+                                    git_worktree.create_worktree(text, branch)
                                 else
                                     print("No path to create worktree")
                                 end

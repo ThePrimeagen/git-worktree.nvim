@@ -37,7 +37,7 @@ local function change_dirs(path)
         local cmd = string.format("cd %s", worktree_path)
         vim.cmd(cmd)
     else
-        status:error('Could not chang to directory: ' ..worktree_path)
+        error('Could not chang to directory: ' ..worktree_path)
     end
 
     if M._config.clearjumps_on_change then
@@ -117,11 +117,29 @@ local function failure(from, cmd, path, soft_error)
         if soft_error then
             status:status(error_message)
         else
-            status:error(error_message)
+            error(error_message)
         end
     end
 end
 
+local function has_origin()
+    local found = false
+    local job = Job:new({
+        'git', 'remote', 'show',
+        on_stdout = function(_, data)
+            data = vim.trim(data)
+            found = found or data == 'origin'
+        end,
+        cwd = git_worktree_root,
+    })
+
+    -- TODO: I really don't want status's spread everywhere... seems bad
+    job:after(function()
+        status:status("found origin: " .. tostring(found))
+    end):sync()
+
+    return found
+end
 
 local function has_branch(branch, cb)
     local found = false
@@ -193,46 +211,60 @@ local function create_worktree(path, branch, upstream, found_branch)
         end
     })
 
-    create:and_then_on_success(fetch)
-    fetch:and_then_on_success(set_branch)
+    if upstream ~= nil then
+        create:and_then_on_success(fetch)
+        fetch:and_then_on_success(set_branch)
 
-    if M._config.autopush then
-      -- These are "optional" operations.
-      -- We have to figure out how we want to handle these...
-      set_branch:and_then(set_push)
-      set_push:and_then(rebase)
-      set_push:after_failure(failure("create_worktree", set_branch.args, worktree_path, true))
-    else
-      set_branch:and_then(rebase)
-    end
-
-    create:after_failure(failure("create_worktree", create.args, git_worktree_root))
-    fetch:after_failure(failure("create_worktree", fetch.args, worktree_path))
-
-    set_branch:after_failure(failure("create_worktree", set_branch.args, worktree_path, true))
-
-    rebase:after(function()
-
-        if rebase.code ~= 0 then
-            status:status("Rebase failed, but that's ok.")
+        if M._config.autopush then
+            -- These are "optional" operations.
+            -- We have to figure out how we want to handle these...
+            set_branch:and_then(set_push)
+            set_push:and_then(rebase)
+            set_push:after_failure(failure("create_worktree", set_branch.args, worktree_path, true))
+        else
+            set_branch:and_then(rebase)
         end
 
-        vim.schedule(function()
-            emit_on_change(Enum.Operations.Create, path, upstream)
-            M.switch_worktree(path)
+        create:after_failure(failure("create_worktree", create.args, git_worktree_root))
+        fetch:after_failure(failure("create_worktree", fetch.args, worktree_path))
+
+        set_branch:after_failure(failure("create_worktree", set_branch.args, worktree_path, true))
+
+        rebase:after(function()
+
+            if rebase.code ~= 0 then
+                status:status("Rebase failed, but that's ok.")
+            end
+
+            vim.schedule(function()
+                emit_on_change(Enum.Operations.Create, path, upstream)
+                M.switch_worktree(path)
+            end)
         end)
-    end)
+    else
+        create:after(function()
+            vim.schedule(function()
+                emit_on_change(Enum.Operations.Create, path, upstream)
+                M.switch_worktree(path)
+            end)
+        end)
+    end
 
     create:start()
 end
 
 M.create_worktree = function(path, branch, upstream)
     status:reset(8)
-    status:status("Creating Worktree at " .. path .. " on branch " .. branch .. "for upstream " .. upstream)
+
+    if upstream == nil then
+        if has_origin() then
+            upstream = "origin"
+        end
+    end
 
     has_worktree(path, function(found)
         if found then
-            status:error("worktree already exists")
+            error("worktree already exists")
         end
 
         has_branch(branch, function(found_branch)
@@ -244,11 +276,10 @@ end
 
 M.switch_worktree = function(path)
     status:reset(2)
-    status:status("Switching Worktree")
     has_worktree(path, function(found)
 
         if not found then
-            status:error("worktree does not exists, please create it first " .. path)
+            error("worktree does not exists, please create it first " .. path)
         end
 
         vim.schedule(function()
@@ -261,10 +292,9 @@ end
 
 M.delete_worktree = function(path, force)
     status:reset(2)
-    status:status("Deleting Worktree")
     has_worktree(path, function(found)
         if not found then
-            status:error(string.format("Worktree %s does not exist", path))
+            error(string.format("Worktree %s does not exist", path))
         end
 
         local cmd = {

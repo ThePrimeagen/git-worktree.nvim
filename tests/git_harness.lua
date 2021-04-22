@@ -126,6 +126,31 @@ M.in_repo_from_origin_no_worktrees = function(cb)
     end
 end
 
+M.in_repo_from_local_no_worktrees = function(cb)
+    return function()
+        local random_id = random_string()
+        local local_repo_dir = 'git_worktree_test_origin_repo_' .. random_id
+
+        config_git_worktree()
+        cleanup_repos()
+
+        prepare_origin_repo(local_repo_dir)
+
+        change_dir(local_repo_dir)
+
+        local _, err = pcall(cb)
+
+        reset_cwd()
+
+        cleanup_repos()
+
+        if err ~= nil then
+            error(err)
+        end
+
+    end
+end
+
 M.in_bare_repo_from_origin_1_worktree = function(cb)
     return function()
         local random_id = random_string()
@@ -189,10 +214,16 @@ local get_git_branches_upstreams = function()
     return output
 end
 
-
 M.check_branch_upstream = function(branch, upstream)
     local correct_branch = false
     local correct_upstream = false
+    local upstream_to_check
+
+    if upstream == nil then
+        upstream_to_check = ""
+    else
+        upstream_to_check = upstream .. '/' .. branch
+    end
 
     local refs = get_git_branches_upstreams()
     for _, ref in ipairs(refs) do
@@ -203,12 +234,38 @@ M.check_branch_upstream = function(branch, upstream)
 
         if b == branch then
             correct_branch = true
-            correct_upstream = ( u == upstream .. '/' .. branch )
+            correct_upstream = ( u == upstream_to_check )
         end
 
     end
 
     return correct_branch, correct_upstream
+end
+
+local get_git_worktrees = function()
+    local output = get_os_command_output({
+        "git", "worktree", "list"
+    })
+    return output
+end
+
+M.check_git_worktree_exists = function(worktree_path)
+    local worktree_exists = false
+
+    local refs = get_git_worktrees()
+    for _, line in ipairs(refs) do
+        local worktree_line = {}
+        for section in line:gmatch("%S+") do
+            table.insert(worktree_line, section)
+        end
+
+        if worktree_path == worktree_line[1] then
+            worktree_exists = true
+        end
+
+    end
+
+    return worktree_exists
 end
 
 return M
