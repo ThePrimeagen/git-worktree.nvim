@@ -33,6 +33,32 @@ local delete_worktree = function(prompt_bufnr, force)
     end
 end
 
+local create_input_prompt = function(cb)
+
+    --[[
+    local window = Window.centered({
+        width = 30,
+        height = 1
+    })
+    vim.api.nvim_buf_set_option(window.bufnr, "buftype", "prompt")
+    vim.fn.prompt_setprompt(window.bufnr, "Worktree Location: ")
+    vim.fn.prompt_setcallback(window.bufnr, function(text)
+        vim.api.nvim_win_close(window.win_id, true)
+        vim.api.nvim_buf_delete(window.bufnr, {force = true})
+        cb(text)
+    end)
+
+    vim.api.nvim_set_current_win(window.win_id)
+    vim.fn.schedule(function()
+        vim.nvim_command("startinsert")
+    end)
+    --]]
+    --
+
+    local subtree = vim.fn.input("Path to subtree > ")
+    cb(subtree)
+end
+
 local create_worktree = function()
     require("telescope.builtin").git_branches(
         {
@@ -41,26 +67,24 @@ local create_worktree = function()
                 actions.select_default:replace(
                     function(prompt_bufnr, _)
                         local selected_entry = action_state.get_selected_entry()
+                        local current_line = action_state.get_current_line()
+
                         actions.close(prompt_bufnr)
-                        if selected_entry ~= nil then
-                            local branch = selected_entry.value
 
-                            local window = Window.percentage_range_window(0.5, 0.2)
-                            vim.api.nvim_buf_set_option(window.bufnr, "buftype",
-                                                        "prompt")
-                            vim.fn.prompt_setprompt(window.bufnr, "Worktree Location: ")
-                            vim.fn.prompt_setcallback(window.bufnr, function(text)
-                                vim.api.nvim_win_close(window.win_id, true)
-                                vim.api.nvim_buf_delete(window.bufnr, {force = true})
-                                if text ~= "" then
-                                    git_worktree.create_worktree(text, branch)
-                                else
-                                    print("No path to create worktree")
-                                end
-                            end)
-                            vim.cmd [[startinsert]]
+                        local branch = selected_entry ~= nil and
+                            selected_entry.value or current_line
 
+                        if branch == nil then
+                            return
                         end
+
+                        create_input_prompt(function(name)
+                            if name ~= "" then
+                                git_worktree.create_worktree(name, branch)
+                            else
+                                print("No path to create worktree")
+                            end
+                        end)
                     end)
 
                 -- do we need to replace other default maps?
