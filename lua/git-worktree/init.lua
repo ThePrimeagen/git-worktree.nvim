@@ -14,7 +14,7 @@ local function on_tree_change_handler(op, path, _) -- _ = upstream
         if op == Enum.Operations.Switch then
             local changed = M.update_current_buffer()
             if not changed then
-                vim.cmd(string.format(":Ex %s", M.get_worktree_path(path)))
+                vim.cmd(string.format("e %s", M.get_worktree_path(path)))
             end
         end
     end
