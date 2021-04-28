@@ -6,8 +6,69 @@ local Status = require("git-worktree.status")
 
 local status = Status:new()
 local M = {}
-local git_worktree_root = vim.loop.cwd()
+local git_worktree_root
 local on_change_callbacks = {}
+
+local find_git_worktree_root = function()
+    local cwd = vim.loop.cwd()
+    local is_in_worktree = false
+
+    local in_worktree= Job:new({
+        'git', 'rev-parse', '--is-inside-work-tree',
+        cwd = cwd,
+        on_stdout = function(_, data)
+            if data == "true" then
+                is_in_worktree = true
+            end
+        end
+    })
+
+    local find_git_dir= Job:new({
+        'git', 'rev-parse', '--git-dir',
+        cwd = cwd,
+        on_stdout = function(_, data)
+            if is_in_worktree then
+                -- if in worktree git dir returns absolute path
+
+                -- try to find the dot git folder (non-bare repo)
+                local git_dir = Path:new(data)
+                local has_dot_git = false
+                for _, dir in ipairs(git_dir:_split()) do
+                    if dir == ".git" then
+                        has_dot_git = true
+                        break
+                    end
+                end
+
+                if has_dot_git then
+                    if data == ".git" then
+                        git_worktree_root = cwd
+                    else
+                        local start = data:find("%.git")
+                        git_worktree_root = data:sub(1,start-2)
+                    end
+                else
+                    local start = data:find(".git/worktree")
+                    git_worktree_root = data:sub(0, start + 3)
+                end
+            elseif data == "." then
+                -- we are in the root git dir
+                git_worktree_root = cwd
+            else
+                -- if not in worktree git dir returns relative path
+                local start = data:find(".git")
+                git_worktree_root = Path:new(
+                    string.format("%s" .. Path.path.sep .. "%s", cwd, data:sub(1,start))
+                )
+            end
+        end
+    })
+
+    in_worktree:and_then_on_success(find_git_dir)
+    in_worktree:start()
+end
+
+find_git_worktree_root()
 
 local function on_tree_change_handler(op, path, _) -- _ = upstream
     if M._config.update_on_change then
