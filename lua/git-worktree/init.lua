@@ -6,10 +6,10 @@ local Status = require("git-worktree.status")
 
 local status = Status:new()
 local M = {}
-local git_worktree_root
+local git_worktree_root = nil
 local on_change_callbacks = {}
 
-local find_git_worktree_root = function()
+M._find_git_root_job = function()
     local cwd = vim.loop.cwd()
     local is_in_worktree = false
 
@@ -20,7 +20,10 @@ local find_git_worktree_root = function()
             if data == "true" then
                 is_in_worktree = true
             end
-        end
+        end,
+        on_stderr = function()
+            git_worktree_root = nil
+        end,
     })
 
     local find_git_dir= Job:new({
@@ -65,10 +68,10 @@ local find_git_worktree_root = function()
     })
 
     in_worktree:and_then_on_success(find_git_dir)
-    in_worktree:start()
+    return in_worktree
 end
 
-find_git_worktree_root()
+M._find_git_root_job():start()
 
 local function on_tree_change_handler(op, path, _) -- _ = upstream
     if M._config.update_on_change then

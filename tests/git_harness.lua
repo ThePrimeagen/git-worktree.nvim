@@ -1,5 +1,6 @@
 local git_worktree = require('git-worktree')
 local Job = require('plenary.job')
+local Path = require("plenary.path")
 
 local M = {}
 
@@ -16,7 +17,6 @@ local get_os_command_output = function(cmd)
     }):sync()
     return stdout, ret, stderr
 end
-
 
 local prepare_origin_repo = function(dir)
     vim.api.nvim_exec('!cp -r tests/repo_origin/ /tmp/' .. dir, true)
@@ -67,6 +67,30 @@ end
 
 local config_git_worktree = function()
     git_worktree.setup({})
+end
+
+M.in_non_git_repo = function(cb)
+    return function()
+        local random_id = random_string()
+        local dir = "git_worktree_test_repo_" .. random_id
+
+        config_git_worktree()
+        cleanup_repos()
+
+        Path:new("/tmp/" .. dir):mkdir()
+        change_dir(dir)
+
+        local _, err = pcall(cb)
+
+        reset_cwd()
+
+        cleanup_repos()
+
+        if err ~= nil then
+            error(err)
+        end
+
+    end
 end
 
 M.in_bare_repo_from_origin_no_worktrees = function(cb)
