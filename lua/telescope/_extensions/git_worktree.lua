@@ -97,7 +97,7 @@ end
 local telescope_git_worktree = function(opts)
     opts = opts or {}
     pickers.new({}, {
-        prompt_prefix = "Git Worktrees >",
+        prompt_title = "Git Worktrees",
         finder = finders.new_oneshot_job(vim.tbl_flatten({"git", "worktree", "list"}),
                                          opts),
         sorter = conf.generic_sorter({}),
