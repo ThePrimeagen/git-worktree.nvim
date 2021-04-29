@@ -7,71 +7,108 @@ local Status = require("git-worktree.status")
 local status = Status:new()
 local M = {}
 local git_worktree_root = nil
+local current_worktree_path = nil
 local on_change_callbacks = {}
 
-M._find_git_root_job = function()
+M._find_git_root_job = function(sync)
+    sync = sync or false
     local cwd = vim.loop.cwd()
+
     local is_in_worktree = false
 
-    local in_worktree= Job:new({
+    local inside_worktree_job = Job:new({
         'git', 'rev-parse', '--is-inside-work-tree',
         cwd = cwd,
-        on_stdout = function(_, data)
-            if data == "true" then
+    })
+
+    local process_inside_worktree = function(stdout, code)
+        if code ~= 0 then
+            git_worktree_root = nil
+            return
+        else
+            if stdout == "true" then
                 is_in_worktree = true
             end
-        end,
-        on_stderr = function()
-            git_worktree_root = nil
-        end,
-    })
+        end
+    end
 
-    local find_git_dir= Job:new({
+    local find_git_dir_job = Job:new({
         'git', 'rev-parse', '--git-dir',
         cwd = cwd,
-        on_stdout = function(_, data)
-            if is_in_worktree then
-                -- if in worktree git dir returns absolute path
-
-                -- try to find the dot git folder (non-bare repo)
-                local git_dir = Path:new(data)
-                local has_dot_git = false
-                for _, dir in ipairs(git_dir:_split()) do
-                    if dir == ".git" then
-                        has_dot_git = true
-                        break
-                    end
-                end
-
-                if has_dot_git then
-                    if data == ".git" then
-                        git_worktree_root = cwd
-                    else
-                        local start = data:find("%.git")
-                        git_worktree_root = data:sub(1,start-2)
-                    end
-                else
-                    local start = data:find(".git/worktree")
-                    git_worktree_root = data:sub(0, start + 3)
-                end
-            elseif data == "." then
-                -- we are in the root git dir
-                git_worktree_root = cwd
-            else
-                -- if not in worktree git dir returns relative path
-                local start = data:find(".git")
-                git_worktree_root = Path:new(
-                    string.format("%s" .. Path.path.sep .. "%s", cwd, data:sub(1,start))
-                )
-            end
-        end
     })
 
-    in_worktree:and_then_on_success(find_git_dir)
-    return in_worktree
+    local process_find_git_dir = function(stdout, code)
+        if is_in_worktree then
+            -- if in worktree git dir returns absolute path
+
+            -- try to find the dot git folder (non-bare repo)
+            local git_dir = Path:new(stdout)
+            local has_dot_git = false
+            for _, dir in ipairs(git_dir:_split()) do
+                if dir == ".git" then
+                    has_dot_git = true
+                    break
+                end
+            end
+
+            if has_dot_git then
+                if stdout == ".git" then
+                    git_worktree_root = cwd
+                else
+                    local start = stdout:find("%.git")
+                    git_worktree_root = stdout:sub(1,start - 2)
+                end
+            else
+                local start = stdout:find("/worktrees/")
+                git_worktree_root = stdout:sub(0, start - 1)
+            end
+        elseif stdout == "." then
+            -- we are in the root git dir
+            git_worktree_root = cwd
+        else
+            -- if not in worktree git dir returns relative path
+            local start = stdout:find(".git")
+            git_worktree_root = Path:new(
+            string.format("%s" .. Path.path.sep .. "%s", cwd, stdout:sub(1,start))
+            )
+        end
+    end
+
+    local find_toplevel_job = Job:new({
+        'git', 'rev-parse', '--show-toplevel',
+        cwd = cwd,
+    })
+
+    local process_find_toplevel = function(stdout, code)
+        current_worktree_path = stdout
+    end
+
+
+    local stdout, code = inside_worktree_job:sync()
+    if code ~= 0 then
+        -- not in a git dir
+        git_worktree_root = nil
+        current_worktree_path = nil
+        return
+    end
+    stdout = table.concat(stdout, "")
+    process_inside_worktree(stdout, code)
+
+    stdout, code = find_git_dir_job:sync()
+    stdout = table.concat(stdout, "")
+    process_find_git_dir(stdout, code)
+
+    stdout, code = find_toplevel_job:sync()
+    if code ~= 0 then
+        current_worktree_path = nil
+        return
+    end
+    stdout = table.concat(stdout, "")
+    process_find_toplevel(stdout, code)
+
 end
 
-M._find_git_root_job():start()
+M._find_git_root_job()
 
 local function on_tree_change_handler(op, path, _) -- _ = upstream
     if M._config.update_on_change then
@@ -383,6 +420,10 @@ M.set_worktree_root = function(wd)
     git_worktree_root = wd
 end
 
+M.set_current_worktree_path = function(wd)
+    current_worktree_path = wd
+end
+
 M.update_current_buffer = function()
     local cwd = vim.loop.cwd()
     local current_buf_name = vim.api.nvim_buf_get_name(0)
@@ -432,6 +473,10 @@ end
 
 M.get_root = function()
     return git_worktree_root
+end
+
+M.get_current_worktree_path = function()
+    return current_worktree_path
 end
 
 M.get_worktree_path = function(path)
