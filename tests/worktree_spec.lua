@@ -38,6 +38,7 @@ describe('git-worktree', function()
                 completed_delete = true
             end
         end)
+        git_worktree:_find_git_root_job()
     end)
 
     after_each(function()
