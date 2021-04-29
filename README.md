@@ -21,7 +21,7 @@ fix that).
 <!-- mdformat-toc end -->
 
 ## Known Issues<a name="known-issues"></a>
-There are a few known issues.  I'll try to be actively filing them in the issues.  If you experience something, and it's not an issue, feel free to make an issue!  Even if it's a dupe I am just happy for the contribution.  
+There are a few known issues.  I'll try to be actively filing them in the issues.  If you experience something, and it's not an issue, feel free to make an issue!  Even if it's a dupe I am just happy for the contribution.
 
 ## Dependencies<a name="dependencies"></a>
 
@@ -143,9 +143,18 @@ can act on it.
 local Worktree = require("git-worktree")
 
 -- op = Operation.Switch, Operation.Create, Operation.Delete
--- path = branch in which was swapped too
--- upstream = only present on create, upstream of create operation
-Worktree.on_tree_update(function(op, path, upstream)
+-- metadata = table of useful values (structure dependent on op)
+--      Switch
+--          path = path you switched to
+--          prev_path = previous worktree path
+--      Create
+--          path = path where worktree created
+--          branch = branch name
+--          upstream = upstream remote name
+--      Delete
+--          path = path where worktree deleted
+
+Worktree.on_tree_update(function(op, metadata)
 end)
 ```
 
