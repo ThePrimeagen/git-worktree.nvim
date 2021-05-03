@@ -21,11 +21,13 @@ fix that).
 <!-- mdformat-toc end -->
 
 ## Known Issues<a name="known-issues"></a>
-There are a few known issues.  I'll try to be actively filing them in the issues.  If you experience something and its not an issue, feel free to make an issue!  Even if its a dupe I am just happy for the contribution.  
+There are a few known issues.  I'll try to be actively filing them in the issues.  If you experience something, and it's not an issue, feel free to make an issue!  Even if it's a dupe I am just happy for the contribution.
 
 ## Dependencies<a name="dependencies"></a>
 
 Requires NeoVim 0.5+
+Requires plenary.nvim
+Optional telescope.nvim for telescope extension
 
 ## Getting Started<a name="getting-started"></a>
 
@@ -72,10 +74,13 @@ worktree root.
 cleared so that you don't accidentally go backward to a different branch and
 edit the wrong files.
 
+`autopush`: When creating a new worktree, it will push the branch to the upstream then perform a `git rebase`
+
 ```lua
 require("git-worktree").setup({
     update_on_change = <boolean> -- default: true,
     clearjumps_on_change = <boolean> -- default: true,
+    autopush = <boolean> -- default: false,
 })
 ```
 
@@ -83,16 +88,18 @@ require("git-worktree").setup({
 
 Three primary functions should cover your day-to-day.
 
-```lua
--- Creates a worktree.  Requires the branch name and the upstream
--- Example:
-:lua require("git-worktree").create_worktree("feat-69", "upstream/master")
+The path can be either relative from the git root dir or absoulut path to the worktree.
 
--- switches to an existing worktree.  Requires the branch name
+```lua
+-- Creates a worktree.  Requires the path, branch name, and the upstream
+-- Example:
+:lua require("git-worktree").create_worktree("feat-69", "master", "origin")
+
+-- switches to an existing worktree.  Requires the path name
 -- Example:
 :lua require("git-worktree").switch_worktree("feat-69")
 
--- deletes to an existing worktree.  Requires the branch name
+-- deletes to an existing worktree.  Requires the path name
 -- Example:
 :lua require("git-worktree").delete_worktree("feat-69")
 ```
@@ -105,6 +112,7 @@ Add the following to your vimrc to load the telescope extension
 require("telescope").load_extension("git_worktree")
 ```
 
+### Switch and Deletea worktrees
 To bring up the telescope window listing your workspaces run the following
 
 ```lua
@@ -114,6 +122,18 @@ To bring up the telescope window listing your workspaces run the following
 -- <c-D> - force deletes that worktree
 ```
 
+### Create a worktree
+To bring up the telescope window to create a new worktree run the following
+
+```lua
+:lua require('telescope').extensions.git_worktree.create_git_worktree()
+```
+First a telescope git branch window will appear. Presing enter will choose the selected branch for the branch name. If no branch is selected, then the prompt will be used as the branch name.
+
+After the git branch window, a prompt will be presented to enter the path name to write the worktree to.
+
+As of now you can not specify the upstream in the telescope create workflow, however if it finds a branch of the same name in the origin it will use it
+
 ## Hooks<a name="hooks"></a>
 
 Yes!  The best part about `git-worktree` is that it emits information so that you
@@ -122,10 +142,19 @@ can act on it.
 ```lua
 local Worktree = require("git-worktree")
 
--- op = "switch", "create", "delete"
--- path = branch in which was swapped too
--- upstream = only present on create, upstream of create operation
-Worktree.on_tree_update(function(op, path, upstream)
+-- op = Operation.Switch, Operation.Create, Operation.Delete
+-- metadata = table of useful values (structure dependent on op)
+--      Switch
+--          path = path you switched to
+--          prev_path = previous worktree path
+--      Create
+--          path = path where worktree created
+--          branch = branch name
+--          upstream = upstream remote name
+--      Delete
+--          path = path where worktree deleted
+
+Worktree.on_tree_update(function(op, metadata)
 end)
 ```
 

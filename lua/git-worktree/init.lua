@@ -6,36 +6,140 @@ local Status = require("git-worktree.status")
 
 local status = Status:new()
 local M = {}
-local git_worktree_root = vim.loop.cwd()
+local git_worktree_root = nil
+local current_worktree_path = nil
 local on_change_callbacks = {}
 
-local function on_tree_change_handler(op, path, _) -- _ = upstream
+M._find_git_root_job = function(sync)
+    sync = sync or false
+    local cwd = vim.loop.cwd()
+
+    local is_in_worktree = false
+
+    local inside_worktree_job = Job:new({
+        'git', 'rev-parse', '--is-inside-work-tree',
+        cwd = cwd,
+    })
+
+    local process_inside_worktree = function(stdout, code)
+        if code ~= 0 then
+            git_worktree_root = nil
+            return
+        else
+            if stdout == "true" then
+                is_in_worktree = true
+            end
+        end
+    end
+
+    local find_git_dir_job = Job:new({
+        'git', 'rev-parse', '--git-dir',
+        cwd = cwd,
+    })
+
+    local process_find_git_dir = function(stdout, code)
+        if is_in_worktree then
+            -- if in worktree git dir returns absolute path
+
+            -- try to find the dot git folder (non-bare repo)
+            local git_dir = Path:new(stdout)
+            local has_dot_git = false
+            for _, dir in ipairs(git_dir:_split()) do
+                if dir == ".git" then
+                    has_dot_git = true
+                    break
+                end
+            end
+
+            if has_dot_git then
+                if stdout == ".git" then
+                    git_worktree_root = cwd
+                else
+                    local start = stdout:find("%.git")
+                    git_worktree_root = stdout:sub(1,start - 2)
+                end
+            else
+                local start = stdout:find("/worktrees/")
+                git_worktree_root = stdout:sub(0, start - 1)
+            end
+        elseif stdout == "." then
+            -- we are in the root git dir
+            git_worktree_root = cwd
+        else
+            -- if not in worktree git dir returns relative path
+            local start = stdout:find(".git")
+            git_worktree_root = Path:new(
+            string.format("%s" .. Path.path.sep .. "%s", cwd, stdout:sub(1,start))
+            )
+        end
+    end
+
+    local find_toplevel_job = Job:new({
+        'git', 'rev-parse', '--show-toplevel',
+        cwd = cwd,
+    })
+
+    local process_find_toplevel = function(stdout, code)
+        current_worktree_path = stdout
+    end
+
+
+    local stdout, code = inside_worktree_job:sync()
+    if code ~= 0 then
+        -- not in a git dir
+        git_worktree_root = nil
+        current_worktree_path = nil
+        return
+    end
+    stdout = table.concat(stdout, "")
+    process_inside_worktree(stdout, code)
+
+    stdout, code = find_git_dir_job:sync()
+    stdout = table.concat(stdout, "")
+    process_find_git_dir(stdout, code)
+
+    stdout, code = find_toplevel_job:sync()
+    if code ~= 0 then
+        current_worktree_path = nil
+        return
+    end
+    stdout = table.concat(stdout, "")
+    process_find_toplevel(stdout, code)
+
+end
+
+M._find_git_root_job()
+
+local function on_tree_change_handler(op, metadata)
     if M._config.update_on_change then
         if op == Enum.Operations.Switch then
-            local changed = M.update_current_buffer()
+            local changed = M.update_current_buffer(metadata["prev_path"])
             if not changed then
-                vim.cmd(string.format(":Ex %s", M.get_worktree_path(path)))
+                vim.cmd(string.format("e %s", M.get_worktree_path(metadata["path"])))
             end
         end
     end
 end
 
-local function emit_on_change(op, path, upstream)
+local function emit_on_change(op, metadata)
     -- TODO: We don't have a way to async update what is running
     status:next_status(string.format("Running post %s callbacks", op))
-    on_tree_change_handler(op, path, upstream)
+    on_tree_change_handler(op, metadata)
     for idx = 1, #on_change_callbacks do
-        on_change_callbacks[idx](op, path, upstream)
+        on_change_callbacks[idx](op, metadata)
     end
 end
 
 local function change_dirs(path)
     local worktree_path = M.get_worktree_path(path)
 
+    local previous_worktree = current_worktree_path
+
     -- vim.loop.chdir(worktree_path)
     if Path:new(worktree_path):exists() then
         local cmd = string.format("cd %s", worktree_path)
         vim.cmd(cmd)
+        current_worktree_path = worktree_path
     else
         error('Could not chang to directory: ' ..worktree_path)
     end
@@ -43,6 +147,8 @@ local function change_dirs(path)
     if M._config.clearjumps_on_change then
         vim.cmd("clearjumps")
     end
+
+    return previous_worktree
 end
 
 local function create_worktree_job(path, branch, found_branch)
@@ -237,14 +343,14 @@ local function create_worktree(path, branch, upstream, found_branch)
             end
 
             vim.schedule(function()
-                emit_on_change(Enum.Operations.Create, path, upstream)
+                emit_on_change(Enum.Operations.Create, {path = path, branch = branch, upstream = upstream})
                 M.switch_worktree(path)
             end)
         end)
     else
         create:after(function()
             vim.schedule(function()
-                emit_on_change(Enum.Operations.Create, path, upstream)
+                emit_on_change(Enum.Operations.Create, {path = path, branch = branch, upstream = upstream})
                 M.switch_worktree(path)
             end)
         end)
@@ -283,8 +389,8 @@ M.switch_worktree = function(path)
         end
 
         vim.schedule(function()
-            change_dirs(path)
-            emit_on_change(Enum.Operations.Switch, path)
+            local prev_path = change_dirs(path)
+            emit_on_change(Enum.Operations.Switch, { path = path, prev_path = prev_path })
         end)
 
     end)
@@ -307,7 +413,7 @@ M.delete_worktree = function(path, force)
 
         local delete = Job:new(cmd)
         delete:after_success(vim.schedule_wrap(function()
-            emit_on_change(Enum.Operations.Delete, path)
+            emit_on_change(Enum.Operations.Delete, { path = path })
         end))
 
         delete:after_failure(failure(cmd, vim.loop.cwd()))
@@ -319,10 +425,13 @@ M.set_worktree_root = function(wd)
     git_worktree_root = wd
 end
 
-M.update_current_buffer = function()
+M.set_current_worktree_path = function(wd)
+    current_worktree_path = wd
+end
+
+M.update_current_buffer = function(prev_path)
     local cwd = vim.loop.cwd()
     local current_buf_name = vim.api.nvim_buf_get_name(0)
-
     if not current_buf_name or current_buf_name == "" then
         return false
     end
@@ -333,20 +442,13 @@ M.update_current_buffer = function()
         return true
     end
 
-    start, fin = string.find(name, git_worktree_root, 1, true)
+    start, fin = string.find(name, prev_path, 1, true)
     if start == nil then
         return false
     end
 
     local local_name = name:sub(fin + 2)
 
-    start, fin = string.find(local_name, Path.path.sep, 1, true)
-
-    if not start then
-        return false
-    end
-
-    local_name = local_name:sub(fin + 1)
     local final_path = Path:new({cwd, local_name}):absolute()
 
     if not Path:new(final_path):exists() then
@@ -368,6 +470,10 @@ end
 
 M.get_root = function()
     return git_worktree_root
+end
+
+M.get_current_worktree_path = function()
+    return current_worktree_path
 end
 
 M.get_worktree_path = function(path)

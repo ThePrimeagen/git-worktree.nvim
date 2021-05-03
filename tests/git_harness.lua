@@ -1,5 +1,6 @@
 local git_worktree = require('git-worktree')
 local Job = require('plenary.job')
+local Path = require("plenary.path")
 
 local M = {}
 
@@ -16,7 +17,6 @@ local get_os_command_output = function(cmd)
     }):sync()
     return stdout, ret, stderr
 end
-
 
 local prepare_origin_repo = function(dir)
     vim.api.nvim_exec('!cp -r tests/repo_origin/ /tmp/' .. dir, true)
@@ -66,9 +66,31 @@ local reset_cwd = function()
 end
 
 local config_git_worktree = function()
-    git_worktree.setup({
-        update_on_change = false
-    })
+    git_worktree.setup({})
+end
+
+M.in_non_git_repo = function(cb)
+    return function()
+        local random_id = random_string()
+        local dir = "git_worktree_test_repo_" .. random_id
+
+        config_git_worktree()
+        cleanup_repos()
+
+        Path:new("/tmp/" .. dir):mkdir()
+        change_dir(dir)
+
+        local _, err = pcall(cb)
+
+        reset_cwd()
+
+        cleanup_repos()
+
+        if err ~= nil then
+            error(err)
+        end
+
+    end
 end
 
 M.in_bare_repo_from_origin_no_worktrees = function(cb)
@@ -193,6 +215,65 @@ M.in_repo_from_origin_1_worktree = function(cb)
         change_dir(repo_dir)
 
         create_worktree('../'..feat_dir,'featB')
+
+        local _, err = pcall(cb)
+
+        reset_cwd()
+
+        cleanup_repos()
+
+        if err ~= nil then
+            error(err)
+        end
+
+    end
+end
+
+M.in_bare_repo_from_origin_2_worktrees = function(cb)
+    return function()
+        local random_id = random_string()
+        local origin_repo_dir = 'git_worktree_test_origin_repo_' .. random_id
+        local bare_repo_dir = 'git_worktree_test_repo_' .. random_id
+
+        config_git_worktree()
+        cleanup_repos()
+
+        prepare_origin_repo(origin_repo_dir)
+        prepare_bare_repo(bare_repo_dir, origin_repo_dir)
+        change_dir(bare_repo_dir)
+        create_worktree('featB','featB')
+        create_worktree('featC','featC')
+
+        local _, err = pcall(cb)
+
+        reset_cwd()
+
+        cleanup_repos()
+
+        if err ~= nil then
+            error(err)
+        end
+
+    end
+end
+
+M.in_repo_from_origin_2_worktrees = function(cb)
+    return function()
+        local random_id = random_string()
+        local origin_repo_dir = 'git_worktree_test_origin_repo_' .. random_id
+        local repo_dir = 'git_worktree_test_repo_' .. random_id
+        local featB_dir = 'git_worktree_test_repo_featB_' .. random_id
+        local featC_dir = 'git_worktree_test_repo_featC_' .. random_id
+
+        config_git_worktree()
+        cleanup_repos()
+
+        prepare_origin_repo(origin_repo_dir)
+        prepare_repo(repo_dir, origin_repo_dir)
+        change_dir(repo_dir)
+
+        create_worktree('../'..featB_dir,'featB')
+        create_worktree('../'..featC_dir,'featC')
 
         local _, err = pcall(cb)
 
