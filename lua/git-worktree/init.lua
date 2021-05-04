@@ -10,8 +10,7 @@ local git_worktree_root = nil
 local current_worktree_path = nil
 local on_change_callbacks = {}
 
-M._find_git_root_job = function(sync)
-    sync = sync or false
+M.setup_git_info = function()
     local cwd = vim.loop.cwd()
 
     local is_in_worktree = false
@@ -28,6 +27,7 @@ M._find_git_root_job = function(sync)
         else
             if stdout == "true" then
                 is_in_worktree = true
+            else
             end
         end
     end
@@ -107,8 +107,6 @@ M._find_git_root_job = function(sync)
     process_find_toplevel(stdout, code)
 
 end
-
-M._find_git_root_job()
 
 local function on_tree_change_handler(op, metadata)
     if M._config.update_on_change then
@@ -368,6 +366,8 @@ M.create_worktree = function(path, branch, upstream)
         end
     end
 
+    M.setup_git_info()
+
     has_worktree(path, function(found)
         if found then
             error("worktree already exists")
@@ -382,6 +382,7 @@ end
 
 M.switch_worktree = function(path)
     status:reset(2)
+    M.setup_git_info()
     has_worktree(path, function(found)
 
         if not found then
@@ -398,6 +399,7 @@ end
 
 M.delete_worktree = function(path, force)
     status:reset(2)
+    M.setup_git_info()
     has_worktree(path, function(found)
         if not found then
             error(string.format("Worktree %s does not exist", path))
@@ -430,6 +432,10 @@ M.set_current_worktree_path = function(wd)
 end
 
 M.update_current_buffer = function(prev_path)
+    if prev_path == nil then
+        return false
+    end
+
     local cwd = vim.loop.cwd()
     local current_buf_name = vim.api.nvim_buf_get_name(0)
     if not current_buf_name or current_buf_name == "" then
