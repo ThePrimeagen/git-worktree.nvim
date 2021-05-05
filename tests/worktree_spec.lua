@@ -38,7 +38,6 @@ describe('git-worktree', function()
                 completed_delete = true
             end
         end)
-        git_worktree:_find_git_root_job()
     end)
 
     after_each(function()
@@ -718,7 +717,7 @@ describe('git-worktree', function()
         it('does not find the paths in a non git repo',
             in_non_git_repo(function()
 
-            git_worktree:_find_git_root_job()
+            git_worktree:setup_git_info()
             assert.are.same(nil, git_worktree:get_root())
             assert.are.same(nil, git_worktree:get_current_worktree_path())
 
@@ -727,7 +726,7 @@ describe('git-worktree', function()
         it('finds the paths in a git repo',
             in_repo_from_origin_1_worktree(function()
 
-            git_worktree:_find_git_root_job()
+            git_worktree:setup_git_info()
             assert.are.same(vim.loop.cwd(), git_worktree:get_root())
             assert.are.same(vim.loop.cwd(), git_worktree:get_current_worktree_path())
 
@@ -736,7 +735,7 @@ describe('git-worktree', function()
         it('finds the paths in a bare git repo',
             in_bare_repo_from_origin_1_worktree(function()
 
-            git_worktree:_find_git_root_job()
+            git_worktree:setup_git_info()
             assert.are.same(vim.loop.cwd(), git_worktree:get_root())
             assert.are.same(nil, git_worktree:get_current_worktree_path())
 
@@ -762,7 +761,7 @@ describe('git-worktree', function()
             -- Check to make sure directory was switched
             assert.are.same(vim.loop.cwd(), path)
 
-            git_worktree:_find_git_root_job()
+            git_worktree:setup_git_info()
             assert.are.same(expected_git_repo, git_worktree:get_root())
             assert.are.same(vim.loop.cwd(), git_worktree:get_current_worktree_path())
 
@@ -787,7 +786,7 @@ describe('git-worktree', function()
             -- Check to make sure directory was switched
             assert.are.same(vim.loop.cwd(), git_worktree:get_root() .. Path.path.sep .. path)
 
-            git_worktree:_find_git_root_job()
+            git_worktree:setup_git_info()
             assert.are.same(expected_git_repo, git_worktree:get_root())
             assert.are.same(vim.loop.cwd(), git_worktree:get_current_worktree_path())
 

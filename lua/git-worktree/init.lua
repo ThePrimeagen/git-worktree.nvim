@@ -10,8 +10,7 @@ local git_worktree_root = nil
 local current_worktree_path = nil
 local on_change_callbacks = {}
 
-M._find_git_root_job = function(sync)
-    sync = sync or false
+M.setup_git_info = function()
     local cwd = vim.loop.cwd()
 
     local is_in_worktree = false
@@ -21,14 +20,9 @@ M._find_git_root_job = function(sync)
         cwd = cwd,
     })
 
-    local process_inside_worktree = function(stdout, code)
-        if code ~= 0 then
-            git_worktree_root = nil
-            return
-        else
-            if stdout == "true" then
-                is_in_worktree = true
-            end
+    local process_inside_worktree = function(stdout)
+        if stdout == "true" then
+            is_in_worktree = true
         end
     end
 
@@ -37,7 +31,7 @@ M._find_git_root_job = function(sync)
         cwd = cwd,
     })
 
-    local process_find_git_dir = function(stdout, code)
+    local process_find_git_dir = function(stdout)
         if is_in_worktree then
             -- if in worktree git dir returns absolute path
 
@@ -72,6 +66,7 @@ M._find_git_root_job = function(sync)
             string.format("%s" .. Path.path.sep .. "%s", cwd, stdout:sub(1,start))
             )
         end
+        status:log():debug("git directory is: " .. git_worktree_root)
     end
 
     local find_toplevel_job = Job:new({
@@ -79,42 +74,48 @@ M._find_git_root_job = function(sync)
         cwd = cwd,
     })
 
-    local process_find_toplevel = function(stdout, code)
+    local process_find_toplevel = function(stdout)
         current_worktree_path = stdout
+        status:log().debug("git toplevel is: " .. current_worktree_path)
     end
 
 
     local stdout, code = inside_worktree_job:sync()
     if code ~= 0 then
-        -- not in a git dir
+        status:log().error("Error in determining if we are in a worktree")
         git_worktree_root = nil
         current_worktree_path = nil
         return
     end
     stdout = table.concat(stdout, "")
-    process_inside_worktree(stdout, code)
+    process_inside_worktree(stdout)
 
     stdout, code = find_git_dir_job:sync()
+    if code ~= 0 then
+        status:log().error("Error in determining the git root dir")
+        git_worktree_root = nil
+        return
+    end
     stdout = table.concat(stdout, "")
-    process_find_git_dir(stdout, code)
+    process_find_git_dir(stdout)
 
     stdout, code = find_toplevel_job:sync()
     if code ~= 0 then
+        status:log().error("Error in determining the git toplevel")
         current_worktree_path = nil
         return
     end
     stdout = table.concat(stdout, "")
-    process_find_toplevel(stdout, code)
+    process_find_toplevel(stdout)
 
 end
-
-M._find_git_root_job()
 
 local function on_tree_change_handler(op, metadata)
     if M._config.update_on_change then
         if op == Enum.Operations.Switch then
             local changed = M.update_current_buffer(metadata["prev_path"])
             if not changed then
+                status:log().debug("Could not change to the file in the new worktree, opening the new path")
                 vim.cmd(string.format("e %s", M.get_worktree_path(metadata["path"])))
             end
         end
@@ -138,13 +139,15 @@ local function change_dirs(path)
     -- vim.loop.chdir(worktree_path)
     if Path:new(worktree_path):exists() then
         local cmd = string.format("cd %s", worktree_path)
+        status:log().debug("Changing to directory " .. worktree_path)
         vim.cmd(cmd)
         current_worktree_path = worktree_path
     else
-        error('Could not chang to directory: ' ..worktree_path)
+        status:error('Could not chang to directory: ' ..worktree_path)
     end
 
     if M._config.clearjumps_on_change then
+        status:log().debug("Clearing jumps")
         vim.cmd("clearjumps")
     end
 
@@ -223,7 +226,7 @@ local function failure(from, cmd, path, soft_error)
         if soft_error then
             status:status(error_message)
         else
-            error(error_message)
+            status:error(error_message)
         end
     end
 end
@@ -368,9 +371,11 @@ M.create_worktree = function(path, branch, upstream)
         end
     end
 
+    M.setup_git_info()
+
     has_worktree(path, function(found)
         if found then
-            error("worktree already exists")
+            status:error("worktree already exists")
         end
 
         has_branch(branch, function(found_branch)
@@ -382,10 +387,11 @@ end
 
 M.switch_worktree = function(path)
     status:reset(2)
+    M.setup_git_info()
     has_worktree(path, function(found)
 
         if not found then
-            error("worktree does not exists, please create it first " .. path)
+            status:error("worktree does not exists, please create it first " .. path)
         end
 
         vim.schedule(function()
@@ -398,9 +404,10 @@ end
 
 M.delete_worktree = function(path, force)
     status:reset(2)
+    M.setup_git_info()
     has_worktree(path, function(found)
         if not found then
-            error(string.format("Worktree %s does not exist", path))
+            status:error(string.format("Worktree %s does not exist", path))
         end
 
         local cmd = {
@@ -430,6 +437,10 @@ M.set_current_worktree_path = function(wd)
 end
 
 M.update_current_buffer = function(prev_path)
+    if prev_path == nil then
+        return false
+    end
+
     local cwd = vim.loop.cwd()
     local current_buf_name = vim.api.nvim_buf_get_name(0)
     if not current_buf_name or current_buf_name == "" then
