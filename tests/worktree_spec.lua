@@ -9,6 +9,7 @@ local in_bare_repo_from_origin_1_worktree = harness.in_bare_repo_from_origin_1_w
 local in_repo_from_origin_1_worktree = harness.in_repo_from_origin_1_worktree
 local in_repo_from_local_no_worktrees = harness.in_repo_from_local_no_worktrees
 local in_bare_repo_from_origin_2_worktrees = harness.in_bare_repo_from_origin_2_worktrees
+local in_bare_repo_from_origin_3_worktrees = harness.in_bare_repo_from_origin_3_worktrees
 local in_repo_from_origin_2_worktrees = harness.in_repo_from_origin_2_worktrees
 local check_git_worktree_exists = harness.check_git_worktree_exists
 local check_branch_upstream = harness.check_branch_upstream
@@ -482,6 +483,53 @@ describe('git-worktree', function()
 
             -- make sure it switch to file in other tree
             assert.True(featC_abs_A_path == get_current_file())
+        end))
+
+        it('in a featB worktree(bare) with file A inside featC open, switch to featD and switch to file A in other worktree',
+            in_bare_repo_from_origin_3_worktrees(function()
+
+            local featB_path = "featB"
+            local featB_abs_path = git_worktree:get_root() .. Path.path.sep .. featB_path
+            local featB_abs_A_path = featB_abs_path .. Path.path.sep .. "A.txt"
+
+            local featC_path = "featC"
+            local featC_abs_path = git_worktree:get_root() .. Path.path.sep .. featC_path
+            local featC_abs_A_path = featC_abs_path .. Path.path.sep .. "A.txt"
+
+            local featD_path = "featD"
+            local featD_abs_path = git_worktree:get_root() .. Path.path.sep .. featD_path
+            local featD_abs_A_path = featD_abs_path .. Path.path.sep .. "A.txt"
+
+            -- switch to featB worktree
+            git_worktree.switch_worktree(featB_path)
+
+            vim.fn.wait(
+            10000,
+            function()
+                return completed_switch
+            end,
+            1000
+            )
+
+            -- open A file
+            vim.cmd("e ../featC/A.txt")
+            -- make sure it is opened
+            assert.True(featC_abs_A_path == get_current_file())
+
+            -- switch to featD worktree
+            reset_variables()
+            git_worktree.switch_worktree(featD_path)
+
+            vim.fn.wait(
+            10000,
+            function()
+                return completed_switch
+            end,
+            1000
+            )
+
+            -- make sure it switch to file in other tree
+            assert.True(featD_abs_A_path == get_current_file())
         end))
 
         it('in a featB worktree(non bare) with file A open, switch to featC and switch to file A in other worktree',
