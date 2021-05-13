@@ -72,8 +72,11 @@ git config remote.origin.fetch "+refs/heads/*:refs/remotes/origin/*"
 ## Options<a name="options"></a>
 
 `update_on_change`:  Updates the current buffer to point to the new work tree if
-the file is found in the new project. Otherwise, it will open up `:Ex` at the
-worktree root.
+the file is found in the new project. Otherwise, the following command will be run.
+
+`update_on_change_command`: The vim command to run during the `update_on_change` event.
+Note, that this command will only be run when the current file is not found in the new worktree.
+This option defaults to `e .` which opens the root directory of the new worktree.
 
 `clearjumps_on_change`: Every time you switch branches, your jumplist will be
 cleared so that you don't accidentally go backward to a different branch and
@@ -84,6 +87,7 @@ edit the wrong files.
 ```lua
 require("git-worktree").setup({
     update_on_change = <boolean> -- default: true,
+    update_on_change_command = <str> -- default: "e .",
     clearjumps_on_change = <boolean> -- default: true,
     autopush = <boolean> -- default: false,
 })

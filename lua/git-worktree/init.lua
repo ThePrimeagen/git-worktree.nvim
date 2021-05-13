@@ -115,8 +115,8 @@ local function on_tree_change_handler(op, metadata)
         if op == Enum.Operations.Switch then
             local changed = M.update_current_buffer(metadata["prev_path"])
             if not changed then
-                status:log().debug("Could not change to the file in the new worktree, opening the new path")
-                vim.cmd(string.format("e %s", M.get_worktree_path(metadata["path"])))
+                status:log().debug("Could not change to the file in the new worktree, running the `update_on_change_command`")
+                vim.cmd(M._config.update_on_change_command)
             end
         end
     end
@@ -499,6 +499,7 @@ M.setup = function(config)
     config = config or {}
     M._config = vim.tbl_deep_extend("force", {
         update_on_change = true,
+        update_on_change_command = "e .",
         clearjumps_on_change = true,
         -- should this default to true or false?
         autopush = false,
