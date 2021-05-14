@@ -288,6 +288,65 @@ M.in_repo_from_origin_2_worktrees = function(cb)
     end
 end
 
+M.in_bare_repo_from_origin_2_similar_named_worktrees = function(cb)
+    return function()
+        local random_id = random_string()
+        local origin_repo_dir = 'git_worktree_test_origin_repo_' .. random_id
+        local bare_repo_dir = 'git_worktree_test_repo_' .. random_id
+
+        config_git_worktree()
+        cleanup_repos()
+
+        prepare_origin_repo(origin_repo_dir)
+        prepare_bare_repo(bare_repo_dir, origin_repo_dir)
+        change_dir(bare_repo_dir)
+        create_worktree('featB','featB')
+        create_worktree('featB-test','featC')
+
+        local _, err = pcall(cb)
+
+        reset_cwd()
+
+        cleanup_repos()
+
+        if err ~= nil then
+            error(err)
+        end
+
+    end
+end
+
+M.in_repo_from_origin_2_similar_named_worktrees = function(cb)
+    return function()
+        local random_id = random_string()
+        local origin_repo_dir = 'git_worktree_test_origin_repo_' .. random_id
+        local repo_dir = 'git_worktree_test_repo_' .. random_id
+        local featB_dir = 'git_worktree_test_repo_featB_' .. random_id
+        local featC_dir = 'git_worktree_test_repo_featB-test_' .. random_id
+
+        config_git_worktree()
+        cleanup_repos()
+
+        prepare_origin_repo(origin_repo_dir)
+        prepare_repo(repo_dir, origin_repo_dir)
+        change_dir(repo_dir)
+
+        create_worktree('../'..featB_dir,'featB')
+        create_worktree('../'..featC_dir,'featC')
+
+        local _, err = pcall(cb)
+
+        reset_cwd()
+
+        cleanup_repos()
+
+        if err ~= nil then
+            error(err)
+        end
+
+    end
+end
+
 local get_git_branches_upstreams = function()
     local output = get_os_command_output({
         "git", "for-each-ref", "--format", "'%(refname:short),%(upstream:short)'", "refs/heads"

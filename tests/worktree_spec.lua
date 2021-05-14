@@ -10,6 +10,8 @@ local in_repo_from_origin_1_worktree = harness.in_repo_from_origin_1_worktree
 local in_repo_from_local_no_worktrees = harness.in_repo_from_local_no_worktrees
 local in_bare_repo_from_origin_2_worktrees = harness.in_bare_repo_from_origin_2_worktrees
 local in_repo_from_origin_2_worktrees = harness.in_repo_from_origin_2_worktrees
+local in_bare_repo_from_origin_2_similar_named_worktrees = harness.in_bare_repo_from_origin_2_similar_named_worktrees
+local in_repo_from_origin_2_similar_named_worktrees = harness.in_repo_from_origin_2_similar_named_worktrees
 local check_git_worktree_exists = harness.check_git_worktree_exists
 local check_branch_upstream = harness.check_branch_upstream
 
@@ -613,6 +615,121 @@ describe('git-worktree', function()
 
             -- make sure it switch to file in other tree
             assert.True(featC_abs_path == get_current_file())
+        end))
+
+        it('from a bare repo with two worktrees, able to switch to worktree with similar names (relative path)',
+            in_bare_repo_from_origin_2_similar_named_worktrees(function()
+
+            local path1 = "featB"
+            local path2 = "featB-test"
+            git_worktree.switch_worktree(path1)
+
+            vim.fn.wait(
+            10000,
+            function()
+                return completed_switch
+            end,
+            1000
+            )
+            reset_variables()
+
+            -- Check to make sure directory was switched
+            assert.are.same(vim.loop.cwd(), git_worktree:get_root() .. Path.path.sep .. path1)
+
+            -- open A file
+            vim.cmd("e A.txt")
+            -- make sure it is opensd
+            assert.True(vim.loop.cwd().."/A.txt" == get_current_file())
+
+            git_worktree.switch_worktree(path2)
+
+            vim.fn.wait(
+            10000,
+            function()
+                return completed_switch
+            end,
+            1000
+            )
+            reset_variables()
+
+            -- Check to make sure directory was switched
+            assert.are.same(vim.loop.cwd(), git_worktree:get_root() .. Path.path.sep .. path2)
+            -- Make sure file is switched
+            assert.True(vim.loop.cwd().."/A.txt" == get_current_file())
+
+            git_worktree.switch_worktree(path1)
+
+            vim.fn.wait(
+            10000,
+            function()
+                return completed_switch
+            end,
+            1000
+            )
+
+            -- Check to make sure directory was switched
+            assert.are.same(vim.loop.cwd(), git_worktree:get_root() .. Path.path.sep .. path1)
+            -- Make sure file is switched
+            assert.True(vim.loop.cwd().."/A.txt" == get_current_file())
+
+        end))
+
+        it('from a bare repo with two worktrees, able to switch to worktree with similar names (absolute path)',
+            in_bare_repo_from_origin_2_similar_named_worktrees(function()
+
+            local path1 = git_worktree:get_root() .. Path.path.sep .. "featB"
+            local path2 = git_worktree:get_root() .. Path.path.sep .. "featB-test"
+
+            git_worktree.switch_worktree(path1)
+
+            vim.fn.wait(
+            10000,
+            function()
+                return completed_switch
+            end,
+            1000
+            )
+            reset_variables()
+
+            -- Check to make sure directory was switched
+            assert.are.same(vim.loop.cwd(), path1)
+
+            -- open B file
+            vim.cmd("e A.txt")
+            -- make sure it is opensd
+            assert.True(path1.."/A.txt" == get_current_file())
+
+            git_worktree.switch_worktree(path2)
+
+            vim.fn.wait(
+            10000,
+            function()
+                return completed_switch
+            end,
+            1000
+            )
+            reset_variables()
+
+            -- Check to make sure directory was switched
+            assert.are.same(vim.loop.cwd(), path2)
+            -- Make sure file is switched
+            assert.True(path2.."/A.txt" == get_current_file())
+
+            git_worktree.switch_worktree(path1)
+
+            vim.fn.wait(
+            10000,
+            function()
+                return completed_switch
+            end,
+            1000
+            )
+
+            -- Check to make sure directory was switched
+            assert.are.same(vim.loop.cwd(), path1)
+            -- Make sure file is switched
+            assert.True(path1.."/A.txt" == get_current_file())
+
         end))
 
     end)

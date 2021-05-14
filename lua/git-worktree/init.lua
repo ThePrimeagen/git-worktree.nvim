@@ -186,15 +186,22 @@ local function has_worktree(path, cb)
 
     local job = Job:new({
         'git', 'worktree', 'list', on_stdout = function(_, data)
+
+            local list_data = {}
+            for section in data:gmatch("%S+") do
+                table.insert(list_data, section)
+            end
+            data = list_data[1]
+
             local start
             if plenary_path:is_absolute() then
-                start = string.find(data, path, 1, true)
+                start = data == path
             else
                 local worktree_path = Path:new(
                     string.format("%s" .. Path.path.sep .. "%s", git_worktree_root, path)
                 )
                 worktree_path = worktree_path:absolute()
-                start = string.find(data, worktree_path, 1, true)
+                start = data == worktree_path
             end
 
             -- TODO: This is clearly a hack (do not think we need this anymore?)
@@ -448,7 +455,7 @@ M.update_current_buffer = function(prev_path)
     end
 
     local name = Path:new(current_buf_name):absolute()
-    local start, fin = string.find(name, cwd, 1, true)
+    local start, fin = string.find(name, cwd..Path.path.sep, 1, true)
     if start ~= nil then
         return true
     end
