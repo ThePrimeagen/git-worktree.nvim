@@ -71,6 +71,9 @@ git config remote.origin.fetch "+refs/heads/*:refs/remotes/origin/*"
 
 ## Options<a name="options"></a>
 
+`change_directory_command`: The vim command used to change to the new worktree directory.
+Set this to `tcd` if you want to only change the `pwd` for the current vim Tab.
+
 `update_on_change`:  Updates the current buffer to point to the new work tree if
 the file is found in the new project. Otherwise, the following command will be run.
 
@@ -86,6 +89,7 @@ edit the wrong files.
 
 ```lua
 require("git-worktree").setup({
+    change_directory_command = <str> -- default: "cd",
     update_on_change = <boolean> -- default: true,
     update_on_change_command = <str> -- default: "e .",
     clearjumps_on_change = <boolean> -- default: true,

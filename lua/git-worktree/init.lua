@@ -138,7 +138,7 @@ local function change_dirs(path)
 
     -- vim.loop.chdir(worktree_path)
     if Path:new(worktree_path):exists() then
-        local cmd = string.format("cd %s", worktree_path)
+        local cmd = string.format("%s %s", M._config.change_directory_command, worktree_path)
         status:log().debug("Changing to directory " .. worktree_path)
         vim.cmd(cmd)
         current_worktree_path = worktree_path
@@ -505,6 +505,7 @@ end
 M.setup = function(config)
     config = config or {}
     M._config = vim.tbl_deep_extend("force", {
+        change_directory_command = "cd",
         update_on_change = true,
         update_on_change_command = "e .",
         clearjumps_on_change = true,
