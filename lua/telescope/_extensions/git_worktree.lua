@@ -59,7 +59,8 @@ local create_input_prompt = function(cb)
     cb(subtree)
 end
 
-local create_worktree = function()
+local create_worktree = function(opts)
+    opts = opts or {}
     require("telescope.builtin").git_branches(
         {
             attach_mappings = function(_)
@@ -95,12 +96,11 @@ local create_worktree = function()
 end
 
 local telescope_git_worktree = function(opts)
-    opts = opts or {}
-    pickers.new({}, {
+    pickers.new(opts or {}, {
         prompt_title = "Git Worktrees",
         finder = finders.new_oneshot_job(vim.tbl_flatten({"git", "worktree", "list"}),
                                          opts),
-        sorter = conf.generic_sorter({}),
+        sorter = conf.generic_sorter(opts),
         attach_mappings = function(_, map)
             action_set.select:replace(switch_worktree)
 
