@@ -59,38 +59,35 @@ end
 
 local create_worktree = function(opts)
     opts = opts or {}
-    require("telescope.builtin").git_branches(
-        {
-            attach_mappings = function(_)
+    opts.attach_mappings = function()
+        actions.select_default:replace(
+            function(prompt_bufnr, _)
+                local selected_entry = action_state.get_selected_entry()
+                local current_line = action_state.get_current_line()
 
-                actions.select_default:replace(
-                    function(prompt_bufnr, _)
-                        local selected_entry = action_state.get_selected_entry()
-                        local current_line = action_state.get_current_line()
+                actions.close(prompt_bufnr)
 
-                        actions.close(prompt_bufnr)
+                local branch = selected_entry ~= nil and
+                    selected_entry.value or current_line
 
-                        local branch = selected_entry ~= nil and
-                            selected_entry.value or current_line
+                if branch == nil then
+                    return
+                end
 
-                        if branch == nil then
-                            return
-                        end
+                create_input_prompt(function(name)
+                    if name ~= "" then
+                        git_worktree.create_worktree(name, branch)
+                    else
+                        print("No path to create worktree")
+                    end
+                end)
+            end)
 
-                        create_input_prompt(function(name)
-                            if name ~= "" then
-                                git_worktree.create_worktree(name, branch)
-                            else
-                                print("No path to create worktree")
-                            end
-                        end)
-                    end)
+        -- do we need to replace other default maps?
 
-                -- do we need to replace other default maps?
-
-                return true
-            end
-        })
+        return true
+    end
+    require("telescope.builtin").git_branches(opts)
 end
 
 local telescope_git_worktree = function(opts)
