@@ -1,8 +1,10 @@
 local Path = require("plenary.path")
 local Window = require("plenary.window.float")
+local strings = require("plenary.strings")
 local pickers = require("telescope.pickers")
 local finders = require("telescope.finders")
 local actions = require("telescope.actions")
+local utils = require("telescope.utils")
 local action_set = require("telescope.actions.set")
 local action_state = require("telescope.actions.state")
 local conf = require("telescope.config").values
@@ -10,11 +12,7 @@ local git_worktree = require("git-worktree")
 
 local get_worktree_path = function(prompt_bufnr)
     local selection = action_state.get_selected_entry(prompt_bufnr)
-    local worktree_line = {}
-    for section in selection[1]:gmatch("%S+") do
-        table.insert(worktree_line, section)
-    end
-    return worktree_line[1]
+    return selection.path
 end
 
 local switch_worktree = function(prompt_bufnr)
@@ -96,10 +94,68 @@ local create_worktree = function(opts)
 end
 
 local telescope_git_worktree = function(opts)
+    local output = utils.get_os_command_output({"git", "worktree", "list"})
+    local results = {}
+    local widths = {
+        path = 0,
+        sha = 0,
+        branch = 0
+    }
+
+    local parse_line = function(line)
+        local fields = vim.split(string.gsub(line, "%s+", " "), " ")
+        local entry = {
+            path = fields[1],
+            sha = fields[2],
+            branch = fields[3],
+        }
+
+        if entry.sha ~= "(bare)" then
+            local index = #results + 1
+            for key, val in pairs(widths) do
+                widths[key] = math.max(val, strings.strdisplaywidth(entry[key] or ""))
+            end
+
+            table.insert(results, index, entry)
+        end
+    end
+
+    for _, line in ipairs(output) do
+        parse_line(line)
+    end
+
+    if #results == 0 then
+        return
+    end
+
+    local displayer = require("telescope.pickers.entry_display").create {
+        separator = " ",
+        items = {
+            { width = widths.branch },
+            { width = widths.path },
+            { width = widths.sha },
+        },
+    }
+
+    local make_display = function(entry)
+        return displayer {
+            { entry.branch, "TelescopeResultsIdentifier" },
+            { utils.transform_path(opts, entry.path) },
+            { entry.sha },
+        }
+    end
+
     pickers.new(opts or {}, {
         prompt_title = "Git Worktrees",
-        finder = finders.new_oneshot_job(vim.tbl_flatten({"git", "worktree", "list"}),
-                                         opts),
+        finder = finders.new_table {
+            results = results,
+            entry_maker = function(entry)
+                entry.value = entry.branch
+                entry.ordinal = entry.branch
+                entry.display = make_display
+                return entry
+            end,
+        },
         sorter = conf.generic_sorter(opts),
         attach_mappings = function(_, map)
             action_set.select:replace(switch_worktree)
