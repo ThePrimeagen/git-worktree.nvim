@@ -102,7 +102,7 @@ local telescope_git_worktree = function(opts)
     local parse_line = function(line)
         local fields = vim.split(string.gsub(line, "%s+", " "), " ")
         local entry = {
-            path = utils.transform_path(opts, fields[1]),
+            path = fields[1],
             sha = fields[2],
             branch = fields[3],
         }
@@ -110,7 +110,13 @@ local telescope_git_worktree = function(opts)
         if entry.sha ~= "(bare)" then
             local index = #results + 1
             for key, val in pairs(widths) do
-                widths[key] = math.max(val, strings.strdisplaywidth(entry[key] or ""))
+                if key == 'path' then
+                    new_path = utils.transform_path(opts, entry[key])
+                    path_len = strings.strdisplaywidth(new_path or "")
+                    widths[key] = math.max(val, path_len)
+                else
+                    widths[key] = math.max(val, strings.strdisplaywidth(entry[key] or ""))
+                end
             end
 
             table.insert(results, index, entry)
@@ -137,7 +143,7 @@ local telescope_git_worktree = function(opts)
     local make_display = function(entry)
         return displayer {
             { entry.branch, "TelescopeResultsIdentifier" },
-            { entry.path },
+            { utils.transform_path(opts, entry.path) },
             { entry.sha },
         }
     end
