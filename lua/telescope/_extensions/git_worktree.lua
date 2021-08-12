@@ -102,7 +102,7 @@ local telescope_git_worktree = function(opts)
     local parse_line = function(line)
         local fields = vim.split(string.gsub(line, "%s+", " "), " ")
         local entry = {
-            path = fields[1],
+            path = utils.transform_path(opts, fields[1]),
             sha = fields[2],
             branch = fields[3],
         }
@@ -137,7 +137,7 @@ local telescope_git_worktree = function(opts)
     local make_display = function(entry)
         return displayer {
             { entry.branch, "TelescopeResultsIdentifier" },
-            { utils.transform_path(opts, entry.path) },
+            { entry.path },
             { entry.sha },
         }
     end
