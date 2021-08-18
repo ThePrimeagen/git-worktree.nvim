@@ -91,6 +91,7 @@ local create_worktree = function(opts)
 end
 
 local telescope_git_worktree = function(opts)
+    opts = opts or {}
     local output = utils.get_os_command_output({"git", "worktree", "list"})
     local results = {}
     local widths = {
