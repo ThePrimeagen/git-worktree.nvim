@@ -125,7 +125,7 @@ Add the following to your vimrc to load the telescope extension
 require("telescope").load_extension("git_worktree")
 ```
 
-### Switch and Deletea worktrees
+### Switch and Delete a worktrees
 To bring up the telescope window listing your workspaces run the following
 
 ```lua
