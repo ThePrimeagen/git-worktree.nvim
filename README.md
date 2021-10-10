@@ -167,7 +167,7 @@ local Worktree = require("git-worktree")
 --      Delete
 --          path = path where worktree deleted
 
-Worktree.on_tree_update(function(op, metadata)
+Worktree.on_tree_change(function(op, metadata)
 end)
 ```
 
