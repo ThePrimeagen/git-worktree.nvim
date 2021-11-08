@@ -854,7 +854,7 @@ describe('git-worktree', function()
 
             git_worktree:setup_git_info()
             assert.are.same(vim.loop.cwd(), git_worktree:get_root())
-            assert.are.same(nil, git_worktree:get_current_worktree_path())
+            assert.are.same(vim.loop.cwd(), git_worktree:get_current_worktree_path())
 
         end))
 
