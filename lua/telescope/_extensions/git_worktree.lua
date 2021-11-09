@@ -75,11 +75,10 @@ local create_worktree = function(opts)
                 end
 
                 create_input_prompt(function(name)
-                    if name ~= "" then
-                        git_worktree.create_worktree(name, branch)
-                    else
-                        print("No path to create worktree")
+                    if name == "" then
+                        name = branch
                     end
+                    git_worktree.create_worktree(name, branch)
                 end)
             end)
 
