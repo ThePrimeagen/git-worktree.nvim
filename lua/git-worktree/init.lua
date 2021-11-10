@@ -75,7 +75,7 @@ M.setup_git_info = function()
     })
 
     local find_toplevel_bare_job = Job:new({
-        'git', 'worktree', 'list',
+        'git', 'rev-parse', '--is-bare-repository',
         cwd = cwd,
     })
 
@@ -85,13 +85,8 @@ M.setup_git_info = function()
     end
 
     local process_find_toplevel_bare = function(stdout)
-        local bare = "(bare)"
-        for _, line in pairs(stdout) do
-            if line and line:sub(-#bare) == bare then
-                current_worktree_path = vim.split(line, " ")[1]
-                status:log().debug("git toplevel is: " .. current_worktree_path)
-                return
-            end
+        if stdout == "true" then
+            current_worktree_path = cwd
         end
     end
 
@@ -121,8 +116,8 @@ M.setup_git_info = function()
     else
         stdout, code = find_toplevel_bare_job:sync()
         if code == 0 then
+            stdout = table.concat(stdout, "")
             process_find_toplevel_bare(stdout)
-            -- current_worktree_path = vim.inspect(stdout)
         else
             status:log().error("Error in determining the git toplevel")
             current_worktree_path = nil
