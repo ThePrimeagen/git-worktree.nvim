@@ -31,7 +31,7 @@ local delete_worktree = function(prompt_bufnr, force)
     end
 end
 
-local create_input_prompt = function(cb)
+local create_input_prompt = function(cb, default_value)
 
     --[[
     local window = Window.centered({
@@ -53,7 +53,11 @@ local create_input_prompt = function(cb)
     --]]
     --
 
-    local subtree = vim.fn.input("Path to subtree > ")
+    local subtree = vim.fn.input({
+        prompt = "Path to subtree > ",
+        default = default_value,
+        completion = "dir",
+    })
     cb(subtree)
 end
 
@@ -74,12 +78,13 @@ local create_worktree = function(opts)
                     return
                 end
 
+                local default_value = branch:gsub("%/", "__"):gsub("%.", "__")
                 create_input_prompt(function(name)
                     if name == "" then
                         name = branch
                     end
                     git_worktree.create_worktree(name, branch)
-                end)
+                end, default_value)
             end)
 
         -- do we need to replace other default maps?
