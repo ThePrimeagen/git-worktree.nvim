@@ -32,7 +32,6 @@ local delete_worktree = function(prompt_bufnr, force)
 end
 
 local create_input_prompt = function(cb)
-
     --[[
     local window = Window.centered({
         width = 30,
@@ -60,27 +59,26 @@ end
 local create_worktree = function(opts)
     opts = opts or {}
     opts.attach_mappings = function()
-        actions.select_default:replace(
-            function(prompt_bufnr, _)
-                local selected_entry = action_state.get_selected_entry()
-                local current_line = action_state.get_current_line()
+        actions.select_default:replace(function(prompt_bufnr, _)
+            local selected_entry = action_state.get_selected_entry()
+            local current_line = action_state.get_current_line()
 
-                actions.close(prompt_bufnr)
+            actions.close(prompt_bufnr)
 
-                local branch = selected_entry ~= nil and
-                    selected_entry.value or current_line
+            local branch = selected_entry ~= nil and selected_entry.value
+                or current_line
 
-                if branch == nil then
-                    return
+            if branch == nil then
+                return
+            end
+
+            create_input_prompt(function(name)
+                if name == "" then
+                    name = branch
                 end
-
-                create_input_prompt(function(name)
-                    if name == "" then
-                        name = branch
-                    end
-                    git_worktree.create_worktree(name, branch)
-                end)
+                git_worktree.create_worktree(name, branch)
             end)
+        end)
 
         -- do we need to replace other default maps?
 
@@ -91,12 +89,12 @@ end
 
 local telescope_git_worktree = function(opts)
     opts = opts or {}
-    local output = utils.get_os_command_output({"git", "worktree", "list"})
+    local output = utils.get_os_command_output({ "git", "worktree", "list" })
     local results = {}
     local widths = {
         path = 0,
         sha = 0,
-        branch = 0
+        branch = 0,
     }
 
     local parse_line = function(line)
@@ -110,12 +108,15 @@ local telescope_git_worktree = function(opts)
         if entry.sha ~= "(bare)" then
             local index = #results + 1
             for key, val in pairs(widths) do
-                if key == 'path' then
+                if key == "path" then
                     new_path = utils.transform_path(opts, entry[key])
                     path_len = strings.strdisplaywidth(new_path or "")
                     widths[key] = math.max(val, path_len)
                 else
-                    widths[key] = math.max(val, strings.strdisplaywidth(entry[key] or ""))
+                    widths[key] = math.max(
+                        val,
+                        strings.strdisplaywidth(entry[key] or "")
+                    )
                 end
             end
 
@@ -131,26 +132,26 @@ local telescope_git_worktree = function(opts)
         return
     end
 
-    local displayer = require("telescope.pickers.entry_display").create {
+    local displayer = require("telescope.pickers.entry_display").create({
         separator = " ",
         items = {
             { width = widths.branch },
             { width = widths.path },
             { width = widths.sha },
         },
-    }
+    })
 
     local make_display = function(entry)
-        return displayer {
+        return displayer({
             { entry.branch, "TelescopeResultsIdentifier" },
             { utils.transform_path(opts, entry.path) },
             { entry.sha },
-        }
+        })
     end
 
     pickers.new(opts or {}, {
         prompt_title = "Git Worktrees",
-        finder = finders.new_table {
+        finder = finders.new_table({
             results = results,
             entry_maker = function(entry)
                 entry.value = entry.branch
@@ -158,7 +159,7 @@ local telescope_git_worktree = function(opts)
                 entry.display = make_display
                 return entry
             end,
-        },
+        }),
         sorter = conf.generic_sorter(opts),
         attach_mappings = function(_, map)
             action_set.select:replace(switch_worktree)
@@ -177,14 +178,13 @@ local telescope_git_worktree = function(opts)
             end)
 
             return true
-        end
+        end,
     }):find()
 end
 
-return require("telescope").register_extension(
-           {
-        exports = {
-            git_worktrees = telescope_git_worktree,
-            create_git_worktree = create_worktree
-        }
-    })
+return require("telescope").register_extension({
+    exports = {
+        git_worktrees = telescope_git_worktree,
+        create_git_worktree = create_worktree,
+    },
+})
