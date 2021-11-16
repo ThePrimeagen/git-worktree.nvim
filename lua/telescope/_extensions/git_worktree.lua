@@ -31,34 +31,39 @@ local delete_worktree = function(prompt_bufnr, force)
     end
 end
 
-local create_input_prompt = function(cb)
-    --[[
-    local window = Window.centered({
-        width = 30,
-        height = 1
-    })
-    vim.api.nvim_buf_set_option(window.bufnr, "buftype", "prompt")
-    vim.fn.prompt_setprompt(window.bufnr, "Worktree Location: ")
-    vim.fn.prompt_setcallback(window.bufnr, function(text)
-        vim.api.nvim_win_close(window.win_id, true)
-        vim.api.nvim_buf_delete(window.bufnr, {force = true})
-        cb(text)
-    end)
+local create_input_prompt = function()
+    return vim.fn.input("Path to subtree > ")
+end
 
-    vim.api.nvim_set_current_win(window.win_id)
-    vim.fn.schedule(function()
-        vim.nvim_command("startinsert")
-    end)
-    --]]
-    --
+local use_current_worktree_as_base_prompt = function()
+    return vim.fn.confirm("Use current worktree as base?", "&Yes\n&No", 1) == 1
+end
 
-    local subtree = vim.fn.input("Path to subtree > ")
-    cb(subtree)
+local get_base_branch = function(opts, name, branch)
+    local base_branch_selection_opts = opts or {}
+    base_branch_selection_opts.attach_mappings = function()
+        actions.select_default:replace(function(prompt_bufnr, _)
+            local selected_entry = action_state.get_selected_entry()
+            local current_line = action_state.get_current_line()
+
+            actions.close(prompt_bufnr)
+
+            local base_branch = selected_entry ~= nil and selected_entry.value
+                or current_line
+
+            git_worktree.create_worktree(name, branch, nil, base_branch)
+        end)
+
+        -- do we need to replace other default maps?
+
+        return true
+    end
+    require("telescope.builtin").git_branches(base_branch_selection_opts)
 end
 
 local create_worktree = function(opts)
-    opts = opts or {}
-    opts.attach_mappings = function()
+    local branch_selection_opts = opts or {}
+    branch_selection_opts.attach_mappings = function()
         actions.select_default:replace(function(prompt_bufnr, _)
             local selected_entry = action_state.get_selected_entry()
             local current_line = action_state.get_current_line()
@@ -72,19 +77,29 @@ local create_worktree = function(opts)
                 return
             end
 
-            create_input_prompt(function(name)
-                if name == "" then
-                    name = branch
+            local name = create_input_prompt()
+            if name == "" then
+                name = branch
+            end
+
+            local has_branch = git_worktree.has_branch(branch)
+
+            if not has_branch then
+                if use_current_worktree_as_base_prompt() then
+                    git_worktree.create_worktree(name, branch)
+                else
+                    get_base_branch(opts, name, branch)
                 end
+            else
                 git_worktree.create_worktree(name, branch)
-            end)
+            end
         end)
 
         -- do we need to replace other default maps?
 
         return true
     end
-    require("telescope.builtin").git_branches(opts)
+    require("telescope.builtin").git_branches(branch_selection_opts)
 end
 
 local telescope_git_worktree = function(opts)

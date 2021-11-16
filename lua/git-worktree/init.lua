@@ -327,6 +327,27 @@ local function has_branch(branch, cb)
         :start()
 end
 
+-- Has branch function to use outside of this file
+-- Using the existing one did not work for some reason, got weird erros :)
+M.has_branch = function(branch)
+    local found = false
+    Job
+        :new({
+            "git",
+            "branch",
+            on_stdout = function(_, data)
+                -- remove marker on current branch
+                data = data:gsub("*", "")
+                data = vim.trim(data)
+                found = found or data == branch
+            end,
+            cwd = git_worktree_root,
+        })
+        :sync()
+
+    return found
+end
+
 local function create_worktree(
     path,
     branch,
@@ -334,6 +355,15 @@ local function create_worktree(
     found_branch,
     base_branch
 )
+    has_branch(base_branch, function(found)
+        if not found then
+            status:status(
+                "Valid base branch was not defined, using current worktree"
+            )
+            base_branch = nil
+        end
+    end)
+
     local current_branch_job = Job:new({
         "git",
         "branch",
