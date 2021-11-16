@@ -181,7 +181,7 @@ local function change_dirs(path)
     return previous_worktree
 end
 
-local function create_worktree_job(path, branch, found_branch)
+local function create_worktree_job(path, branch, found_branch, base_branch)
     local worktree_add_cmd = "git"
     local worktree_add_args = { "worktree", "add" }
 
@@ -189,6 +189,8 @@ local function create_worktree_job(path, branch, found_branch)
         table.insert(worktree_add_args, "-b")
         table.insert(worktree_add_args, branch)
         table.insert(worktree_add_args, path)
+
+        table.insert(worktree_add_args, base_branch)
     else
         table.insert(worktree_add_args, path)
         table.insert(worktree_add_args, branch)
@@ -325,8 +327,22 @@ local function has_branch(branch, cb)
         :start()
 end
 
-local function create_worktree(path, branch, upstream, found_branch)
-    local create = create_worktree_job(path, branch, found_branch)
+local function create_worktree(
+    path,
+    branch,
+    upstream,
+    found_branch,
+    base_branch
+)
+    local current_branch_job = Job:new({
+        "git",
+        "branch",
+        "--show-current",
+        cwd = vim.loop.cwd(),
+        on_stdout = function(_, data)
+            base_branch = base_branch or data
+        end,
+    })
 
     local worktree_path
     if Path:new(path):is_absolute() then
@@ -385,62 +401,78 @@ local function create_worktree(path, branch, upstream, found_branch)
         end,
     })
 
-    if upstream ~= nil then
-        create:and_then_on_success(fetch)
-        fetch:and_then_on_success(set_branch)
-
-        if M._config.autopush then
-            -- These are "optional" operations.
-            -- We have to figure out how we want to handle these...
-            set_branch:and_then(set_push)
-            set_push:and_then(rebase)
-            set_push:after_failure(
-                failure("create_worktree", set_branch.args, worktree_path, true)
-            )
-        else
-            set_branch:and_then(rebase)
-        end
-
-        create:after_failure(
-            failure("create_worktree", create.args, git_worktree_root)
-        )
-        fetch:after_failure(
-            failure("create_worktree", fetch.args, worktree_path)
+    current_branch_job:add_on_exit_callback(function()
+        local create = create_worktree_job(
+            path,
+            branch,
+            found_branch,
+            base_branch
         )
 
-        set_branch:after_failure(
-            failure("create_worktree", set_branch.args, worktree_path, true)
-        )
+        if upstream ~= nil then
+            create:and_then_on_success(fetch)
+            fetch:and_then_on_success(set_branch)
 
-        rebase:after(function()
-            if rebase.code ~= 0 then
-                status:status("Rebase failed, but that's ok.")
+            if M._config.autopush then
+                -- These are "optional" operations.
+                -- We have to figure out how we want to handle these...
+                set_branch:and_then(set_push)
+                set_push:and_then(rebase)
+                set_push:after_failure(
+                    failure(
+                        "create_worktree",
+                        set_branch.args,
+                        worktree_path,
+                        true
+                    )
+                )
+            else
+                set_branch:and_then(rebase)
             end
 
-            vim.schedule(function()
-                emit_on_change(
-                    Enum.Operations.Create,
-                    { path = path, branch = branch, upstream = upstream }
-                )
-                M.switch_worktree(path)
-            end)
-        end)
-    else
-        create:after(function()
-            vim.schedule(function()
-                emit_on_change(
-                    Enum.Operations.Create,
-                    { path = path, branch = branch, upstream = upstream }
-                )
-                M.switch_worktree(path)
-            end)
-        end)
-    end
+            create:after_failure(
+                failure("create_worktree", create.args, git_worktree_root)
+            )
+            fetch:after_failure(
+                failure("create_worktree", fetch.args, worktree_path)
+            )
 
-    create:start()
+            set_branch:after_failure(
+                failure("create_worktree", set_branch.args, worktree_path, true)
+            )
+
+            rebase:after(function()
+                if rebase.code ~= 0 then
+                    status:status("Rebase failed, but that's ok.")
+                end
+
+                vim.schedule(function()
+                    emit_on_change(
+                        Enum.Operations.Create,
+                        { path = path, branch = branch, upstream = upstream }
+                    )
+                    M.switch_worktree(path)
+                end)
+            end)
+        else
+            create:after(function()
+                vim.schedule(function()
+                    emit_on_change(
+                        Enum.Operations.Create,
+                        { path = path, branch = branch, upstream = upstream }
+                    )
+                    M.switch_worktree(path)
+                end)
+            end)
+        end
+
+        create:start()
+    end)
+
+    current_branch_job:start()
 end
 
-M.create_worktree = function(path, branch, upstream)
+M.create_worktree = function(path, branch, upstream, base_branch)
     status:reset(8)
 
     if upstream == nil then
@@ -457,7 +489,7 @@ M.create_worktree = function(path, branch, upstream)
         end
 
         has_branch(branch, function(found_branch)
-            create_worktree(path, branch, upstream, found_branch)
+            create_worktree(path, branch, upstream, found_branch, base_branch)
         end)
     end)
 end

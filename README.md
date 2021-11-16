@@ -21,7 +21,8 @@ fix that).
 <!-- mdformat-toc end -->
 
 ## Known Issues<a name="known-issues"></a>
-There are a few known issues.  I'll try to be actively filing them in the issues.  If you experience something, and it's not an issue, feel free to make an issue!  Even if it's a dupe I am just happy for the contribution.
+
+There are a few known issues. I'll try to be actively filing them in the issues. If you experience something, and it's not an issue, feel free to make an issue! Even if it's a dupe I am just happy for the contribution.
 
 ## Dependencies<a name="dependencies"></a>
 
@@ -44,7 +45,7 @@ installed.
 
 ## Repository<a name="repository"></a>
 
-This repository does work best with a bare repo.  To clone a bare repo, do the following.
+This repository does work best with a bare repo. To clone a bare repo, do the following.
 
 ```shell
 git clone --bare <upstream>
@@ -53,18 +54,23 @@ git clone --bare <upstream>
 If you do not use a bare repo, using telescope create command will be more helpful in the process of creating a branch.
 
 ### Debugging
+
 git-worktree writes logs to a `git-worktree-nvim.log` file that resides in Neovim's cache path. (`:echo stdpath("cache")` to find where that is for you.)
 
 By default, logging is enabled for warnings and above. This can be changed by setting `vim.g.git_worktree_log_level` variable to one of the following log levels: `trace`, `debug`, `info`, `warn`, `error`, or `fatal`. Note that this would have to be done **before** git-worktree's `setup` call. Alternatively, it can be more convenient to launch Neovim with an environment variable, e.g. `> GIT_WORKTREE_NVIM_LOG=trace nvim`. In case both, `vim.g` and an environment variable are used, the log level set by the environment variable overrules. Supplying an invalid log level defaults back to warnings.
 
 ### Troubleshooting
+
 If the upstream is not setup correctly when trying to pull or push, make sure the following command returns what is shown below. This seems to happen with the gitHub cli.
+
 ```
 git config --get remote.origin.fetch
 
 +refs/heads/*:refs/remotes/origin/*
 ```
+
 if it does not run the following
+
 ```
 git config remote.origin.fetch "+refs/heads/*:refs/remotes/origin/*"
 ```
@@ -74,7 +80,7 @@ git config remote.origin.fetch "+refs/heads/*:refs/remotes/origin/*"
 `change_directory_command`: The vim command used to change to the new worktree directory.
 Set this to `tcd` if you want to only change the `pwd` for the current vim Tab.
 
-`update_on_change`:  Updates the current buffer to point to the new work tree if
+`update_on_change`: Updates the current buffer to point to the new work tree if
 the file is found in the new project. Otherwise, the following command will be run.
 
 `update_on_change_command`: The vim command to run during the `update_on_change` event.
@@ -104,8 +110,12 @@ Three primary functions should cover your day-to-day.
 The path can be either relative from the git root dir or absoulut path to the worktree.
 
 ```lua
--- Creates a worktree.  Requires the path, branch name, and the upstream
--- Example:
+-- Creates a worktree.  Requires the path, branch name, and the upstream,
+-- Optionally the base branch from which to create the new worktree and branch can be added
+-- Examples:
+-- Creating new worktree and branch `feat-69` based on develop branch to path `feat-69`
+:lua require("git-worktree").create_worktree("feat-69", "feat-69", "origin", "develop")
+-- Creating new worktree `master` based on master to path `feat-69`
 :lua require("git-worktree").create_worktree("feat-69", "master", "origin")
 
 -- switches to an existing worktree.  Requires the path name
@@ -126,6 +136,7 @@ require("telescope").load_extension("git_worktree")
 ```
 
 ### Switch and Delete a worktrees
+
 To bring up the telescope window listing your workspaces run the following
 
 ```lua
@@ -136,11 +147,13 @@ To bring up the telescope window listing your workspaces run the following
 ```
 
 ### Create a worktree
+
 To bring up the telescope window to create a new worktree run the following
 
 ```lua
 :lua require('telescope').extensions.git_worktree.create_git_worktree()
 ```
+
 First a telescope git branch window will appear. Presing enter will choose the selected branch for the branch name. If no branch is selected, then the prompt will be used as the branch name.
 
 After the git branch window, a prompt will be presented to enter the path name to write the worktree to.
@@ -149,7 +162,7 @@ As of now you can not specify the upstream in the telescope create workflow, how
 
 ## Hooks<a name="hooks"></a>
 
-Yes!  The best part about `git-worktree` is that it emits information so that you
+Yes! The best part about `git-worktree` is that it emits information so that you
 can act on it.
 
 ```lua
@@ -178,4 +191,4 @@ charging your development experience!
 ## Made with fury<a name="made-with-fury"></a>
 
 All plugins are made live on [Twitch](https://twitch.tv/ThePrimeagen) with love
-and fury.  Come and join!
+and fury. Come and join!
