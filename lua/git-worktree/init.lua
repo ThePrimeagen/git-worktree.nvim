@@ -27,7 +27,7 @@ M.setup_git_info = function()
     end
 
     local find_git_dir_job = Job:new({
-        'git', 'rev-parse', '--git-dir',
+        'git', 'rev-parse', '--absolute-git-dir',
         cwd = cwd,
     })
 
@@ -60,11 +60,8 @@ M.setup_git_info = function()
             -- we are in the root git dir
             git_worktree_root = cwd
         else
-            -- if not in worktree git dir returns relative path
-            local start = stdout:find(".git")
-            git_worktree_root = Path:new(
-            string.format("%s" .. Path.path.sep .. "%s", cwd, stdout:sub(1,start))
-            )
+            -- if not in worktree git dir should be absolute
+            git_worktree_root = stdout
         end
         status:log():debug("git directory is: " .. git_worktree_root)
     end
