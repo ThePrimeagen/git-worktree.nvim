@@ -71,11 +71,21 @@ M.setup_git_info = function()
         cwd = cwd,
     })
 
+    local find_toplevel_bare_job = Job:new({
+        'git', 'rev-parse', '--is-bare-repository',
+        cwd = cwd,
+    })
+
     local process_find_toplevel = function(stdout)
         current_worktree_path = stdout
         status:log().debug("git toplevel is: " .. current_worktree_path)
     end
 
+    local process_find_toplevel_bare = function(stdout)
+        if stdout == "true" then
+            current_worktree_path = cwd
+        end
+    end
 
     local stdout, code = inside_worktree_job:sync()
     if code ~= 0 then
@@ -97,13 +107,20 @@ M.setup_git_info = function()
     process_find_git_dir(stdout)
 
     stdout, code = find_toplevel_job:sync()
-    if code ~= 0 then
-        status:log().error("Error in determining the git toplevel")
-        current_worktree_path = nil
-        return
+    if code == 0 then
+        stdout = table.concat(stdout, "")
+        process_find_toplevel(stdout)
+    else
+        stdout, code = find_toplevel_bare_job:sync()
+        if code == 0 then
+            stdout = table.concat(stdout, "")
+            process_find_toplevel_bare(stdout)
+        else
+            status:log().error("Error in determining the git toplevel")
+            current_worktree_path = nil
+            return
+        end
     end
-    stdout = table.concat(stdout, "")
-    process_find_toplevel(stdout)
 
 end
 
