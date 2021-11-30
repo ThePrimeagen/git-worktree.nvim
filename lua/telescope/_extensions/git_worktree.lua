@@ -111,8 +111,8 @@ local telescope_git_worktree = function(opts)
             local index = #results + 1
             for key, val in pairs(widths) do
                 if key == 'path' then
-                    new_path = utils.transform_path(opts, entry[key])
-                    path_len = strings.strdisplaywidth(new_path or "")
+                    local new_path = utils.transform_path(opts, entry[key])
+                    local path_len = strings.strdisplaywidth(new_path or "")
                     widths[key] = math.max(val, path_len)
                 else
                     widths[key] = math.max(val, strings.strdisplaywidth(entry[key] or ""))
