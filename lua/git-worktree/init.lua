@@ -205,6 +205,7 @@ local function has_worktree(path, cb)
             for section in data:gmatch("%S+") do
                 table.insert(list_data, section)
             end
+
             data = list_data[1]
 
             local start
@@ -423,7 +424,11 @@ M.switch_worktree = function(path)
     end)
 end
 
-M.delete_worktree = function(path, force)
+M.delete_worktree = function(path, force, opts)
+    if not opts then
+        opts = {}
+    end
+
     status:reset(2)
     M.setup_git_info()
     has_worktree(path, function(found)
@@ -442,9 +447,20 @@ M.delete_worktree = function(path, force)
         local delete = Job:new(cmd)
         delete:after_success(vim.schedule_wrap(function()
             emit_on_change(Enum.Operations.Delete, { path = path })
+            if opts.on_success then
+                opts.on_success()
+            end
         end))
 
-        delete:after_failure(failure(cmd, vim.loop.cwd()))
+        delete:after_failure(function(e)
+            -- callback has to be called before failure() because failure()
+            -- halts code execution
+            if opts.on_failure then
+                opts.on_failure(e)
+            end
+
+            failure(cmd, vim.loop.cwd())(e)
+        end)
         delete:start()
     end)
 end
