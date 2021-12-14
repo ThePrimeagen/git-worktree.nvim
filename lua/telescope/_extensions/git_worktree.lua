@@ -39,6 +39,7 @@ end
 -- so delete_worktree is initialized above create_delete_failure_handler
 local delete_worktree
 
+-- TODO WIP
 local create_delete_failure_handler = function(prompt_bufnr)
     return function(err)
         if offer_forced_deletion() then
@@ -52,7 +53,7 @@ delete_worktree = function(prompt_bufnr, force)
     actions.close(prompt_bufnr)
     if worktree_path ~= nil then
        git_worktree.delete_worktree(worktree_path, force, {
-           on_failure = create_delete_failure_handler(prompt_bufnr),
+           -- on_failure = create_delete_failure_handler(prompt_bufnr),
        })
     end
 end
