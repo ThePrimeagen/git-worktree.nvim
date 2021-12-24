@@ -48,7 +48,28 @@ local create_delete_failure_handler = function(prompt_bufnr)
     end
 end
 
+local confirm_deletion = function()
+    if not git_worktree._config.confirm_telescope_deletions then
+        return true
+    end
+
+    local confirmation = vim.fn.input(
+    string.format("Delete worktree? [y/n]: ")
+    )
+
+    if string.sub(string.lower(confirmation), 0, 1) == "y" then
+        return true
+    end
+
+    print("Didn't delete worktree")
+    return false
+end
+
 delete_worktree = function(prompt_bufnr, force)
+    if not confirm_deletion() then
+        return
+    end
+
     local worktree_path = get_worktree_path(prompt_bufnr)
     actions.close(prompt_bufnr)
     if worktree_path ~= nil then
