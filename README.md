@@ -132,7 +132,7 @@ To bring up the telescope window listing your workspaces run the following
 :lua require('telescope').extensions.git_worktree.git_worktrees()
 -- <Enter> - switches to that worktree
 -- <c-d> - deletes that worktree
--- <c-D> - force deletes that worktree
+-- <c-f> - toggles forcing of the next deletion
 ```
 
 ### Create a worktree

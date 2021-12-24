@@ -10,6 +10,8 @@ local action_state = require("telescope.actions.state")
 local conf = require("telescope.config").values
 local git_worktree = require("git-worktree")
 
+local force_next_deletion = false
+
 local get_worktree_path = function(prompt_bufnr)
     local selection = action_state.get_selected_entry(prompt_bufnr)
     return selection.path
@@ -23,41 +25,42 @@ local switch_worktree = function(prompt_bufnr)
     end
 end
 
-local offer_forced_deletion = function()
-  local confirmation = vim.fn.input(
-      string.format("Deletion failed, would you like to force delete? [y/n]: ")
-  )
-
-  if string.sub(string.lower(confirmation), 0, 1) == "y" then
-      return true
-  end
-
-  return false
-end
-
--- create_delete_failure_handler and delete_worktree need access to each other
--- so delete_worktree is initialized above create_delete_failure_handler
-local delete_worktree
-
--- TODO WIP
-local create_delete_failure_handler = function(prompt_bufnr)
-    return function(err)
-        if offer_forced_deletion() then
-            delete_worktree(prompt_bufnr, true)
-        end
+local toggle_forced_deletion = function()
+    -- redraw otherwise the message is not displayed when in insert mode
+    if force_next_deletion then
+        print('The next deletion will not be forced')
+        vim.fn.execute('redraw')
+    else
+        print('The next deletion will be forced')
+        vim.fn.execute('redraw')
+        force_next_deletion = true
     end
 end
 
-local confirm_deletion = function()
+local delete_success_handler = function()
+    force_next_deletion = false
+end
+
+local delete_failure_handler = function()
+    print("Deletion failed, use <C-f> to force the next deletion")
+end
+
+local ask_to_confirm_deletion = function(forcing)
+    if forcing then
+        return vim.fn.input("Force deletion of worktree? [y/n]: ")
+    end
+
+    return vim.fn.input("Delete worktree? [y/n]: ")
+end
+
+local confirm_deletion = function(forcing)
     if not git_worktree._config.confirm_telescope_deletions then
         return true
     end
 
-    local confirmation = vim.fn.input(
-    string.format("Delete worktree? [y/n]: ")
-    )
+    local confirmed = ask_to_confirm_deletion(forcing)
 
-    if string.sub(string.lower(confirmation), 0, 1) == "y" then
+    if string.sub(string.lower(confirmed), 0, 1) == "y" then
         return true
     end
 
@@ -65,7 +68,7 @@ local confirm_deletion = function()
     return false
 end
 
-delete_worktree = function(prompt_bufnr, force)
+local delete_worktree = function(prompt_bufnr)
     if not confirm_deletion() then
         return
     end
@@ -73,8 +76,9 @@ delete_worktree = function(prompt_bufnr, force)
     local worktree_path = get_worktree_path(prompt_bufnr)
     actions.close(prompt_bufnr)
     if worktree_path ~= nil then
-       git_worktree.delete_worktree(worktree_path, force, {
-           -- on_failure = create_delete_failure_handler(prompt_bufnr),
+       git_worktree.delete_worktree(worktree_path, force_next_deletion, {
+           on_failure = delete_failure_handler,
+           on_success = delete_success_handler
        })
     end
 end
@@ -211,12 +215,10 @@ local telescope_git_worktree = function(opts)
         attach_mappings = function(_, map)
             action_set.select:replace(switch_worktree)
 
-            map("i", "<c-d>", function(prompt_bufnr)
-                delete_worktree(prompt_bufnr)
-            end)
-            map("n", "<c-d>", function(prompt_bufnr)
-                delete_worktree(prompt_bufnr)
-            end)
+            map("i", "<c-d>", delete_worktree)
+            map("n", "<c-d>", delete_worktree)
+            map("i", "<c-f>", toggle_forced_deletion)
+            map("n", "<c-f>", toggle_forced_deletion)
 
             return true
         end
