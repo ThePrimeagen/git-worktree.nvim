@@ -42,23 +42,14 @@ M.setup_git_info = function()
         end
 
         if is_in_worktree then
-            -- if in worktree git dir returns absolute path
-
             -- try to find the dot git folder (non-bare repo)
             if has_dot_git then
-                if stdout == ".git" then
-                    git_worktree_root = cwd
-                else
-                    local start = stdout:find("%.git")
-                    git_worktree_root = stdout:sub(1,start - 2)
-                end
+                local start = stdout:find("%.git")
+                git_worktree_root = stdout:sub(1,start - 2)
             else
                 local start = stdout:find("/worktrees/")
                 git_worktree_root = stdout:sub(0, start - 1)
             end
-        elseif stdout == "." then
-            -- we are in the root git dir
-            git_worktree_root = cwd
         else
           if has_dot_git then
             local start = stdout:find("%.git")
