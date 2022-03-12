@@ -125,6 +125,49 @@ Add the following to your vimrc to load the telescope extension
 require("telescope").load_extension("git_worktree")
 ```
 
+### Configuration
+Enjoy the customizability of `telescope.nvim` using all your favorite configurations as well as additional options outlined in the example below.
+
+```lua
+require('telescope').setup{
+  defaults = {
+      ...
+  },
+  pickers = {
+    ...
+  },
+  extensions = {
+    git_worktree = {
+      prompt_title = "Super cool prompt title",
+      theme = "dropdown",
+      path_display = { "shorten" },
+      layout_config = {
+        width = 70,
+        height = 20,
+      },
+
+      -- determine what worktree items to show, in order and their corresponding width
+      -- possible items to show are `branch`, `path`, `sha`
+      items = {
+        { "branch", 50 },
+        { "sha", 20 },
+      },
+      -- set custom bindings for worktree related actions
+      mappings = {
+        ["i"] = {
+            ["<C-d>"] = require("telescope").extensions.git_worktree.actions.delete_worktree,
+            ["<C-f>"] = require("telescope").extensions.git_worktree.actions.toggle_forced_deletion,
+        },
+        ["n"] = {
+            ["<C-d>"] = require("telescope").extensions.git_worktree.actions.delete_worktree,
+            ["<C-f>"] = require("telescope").extensions.git_worktree.actions.toggle_forced_deletion,
+        },
+      }
+    }
+  }
+}
+```
+
 ### Switch and Delete a worktrees
 To bring up the telescope window listing your workspaces run the following
 
