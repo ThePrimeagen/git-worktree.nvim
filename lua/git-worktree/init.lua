@@ -50,7 +50,7 @@ M.setup_git_info = function()
                     git_worktree_root = cwd
                 else
                     local start = stdout:find("%.git")
-                    git_worktree_root = stdout:sub(1,start - 2)
+                    git_worktree_root = stdout:sub(1, start - 2)
                 end
             else
                 local start = stdout:find("/worktrees/")
@@ -157,7 +157,7 @@ local function change_dirs(path)
         vim.cmd(cmd)
         current_worktree_path = worktree_path
     else
-        status:error('Could not chang to directory: ' ..worktree_path)
+        status:error('Could not chang to directory: ' .. worktree_path)
     end
 
     if M._config.clearjumps_on_change then
@@ -171,7 +171,7 @@ end
 local function create_worktree_job(path, branch, found_branch)
 
     local worktree_add_cmd = 'git'
-    local worktree_add_args = {'worktree', 'add'}
+    local worktree_add_args = { 'worktree', 'add' }
 
     if not found_branch then
         table.insert(worktree_add_args, '-b')
@@ -277,7 +277,7 @@ local function has_branch(branch, cb)
     local job = Job:new({
         'git', 'branch', on_stdout = function(_, data)
             -- remove  markere on current branch
-            data = data:gsub("*","")
+            data = data:gsub("*", "")
             data = vim.trim(data)
             found = found or data == branch
         end,
@@ -311,7 +311,7 @@ local function create_worktree(path, branch, upstream, found_branch)
     })
 
     local set_branch_cmd = 'git'
-    local set_branch_args= {'branch', string.format('--set-upstream-to=%s/%s', upstream, branch)}
+    local set_branch_args = { 'branch', string.format('--set-upstream-to=%s/%s', upstream, branch) }
     local set_branch = Job:new({
         command = set_branch_cmd,
         args = set_branch_args,
@@ -323,9 +323,9 @@ local function create_worktree(path, branch, upstream, found_branch)
 
     -- TODO: How to configure origin???  Should upstream ever be the push
     -- destination?
-    local set_push_cmd = 'git'
-    local set_push_args = {'push', "--set-upstream", upstream,  branch, path}
-    local set_push  = Job:new({
+    local set_push_cmd  = 'git'
+    local set_push_args = { 'push', "--set-upstream", upstream, branch, path }
+    local set_push      = Job:new({
         command = set_push_cmd,
         args = set_push_args,
         cwd = worktree_path,
@@ -368,14 +368,14 @@ local function create_worktree(path, branch, upstream, found_branch)
             end
 
             vim.schedule(function()
-                emit_on_change(Enum.Operations.Create, {path = path, branch = branch, upstream = upstream})
+                emit_on_change(Enum.Operations.Create, { path = path, branch = branch, upstream = upstream })
                 M.switch_worktree(path)
             end)
         end)
     else
         create:after(function()
             vim.schedule(function()
-                emit_on_change(Enum.Operations.Create, {path = path, branch = branch, upstream = upstream})
+                emit_on_change(Enum.Operations.Create, { path = path, branch = branch, upstream = upstream })
                 M.switch_worktree(path)
             end)
         end)
@@ -478,34 +478,60 @@ M.update_current_buffer = function(prev_path)
         return false
     end
 
+    local buffers = vim.api.nvim_list_bufs()
+    local listed_buffers = vim.tbl_filter(function(bufn)
+        return vim.api.nvim_buf_is_valid(bufn) and vim.api.nvim_buf_get_option(bufn, 'buflisted')
+    end, buffers)
+
+    local changed = false
+    local current_buf_name = vim.api.nvim_buf_get_name(vim.api.nvim_get_current_buf())
+    local new_current_buf = 0
+
     local cwd = vim.loop.cwd()
-    local current_buf_name = vim.api.nvim_buf_get_name(0)
-    if not current_buf_name or current_buf_name == "" then
-        return false
+    for _, existing_buffer in ipairs(listed_buffers) do
+        local buf_name = vim.api.nvim_buf_get_name(existing_buffer)
+        if not buf_name or buf_name == "" then
+            goto continue
+        end
+
+        local name = Path:new(buf_name):absolute()
+        local start, fin = string.find(name, cwd .. Path.path.sep, 1, true)
+        if start ~= nil then
+            changed = true
+            goto continue
+        end
+
+        start, fin = string.find(name, prev_path, 1, true)
+        if start == nil then
+            goto continue
+        end
+
+        -- de-list buffer if it's related to the old worktree
+        vim.api.nvim_buf_set_option(existing_buffer, 'buflisted', false)
+
+        local local_name = name:sub(fin + 2)
+
+        local final_path = Path:new({ cwd, local_name }):absolute()
+
+        if not Path:new(final_path):exists() then
+            goto continue
+        end
+
+        local new_buffer = vim.fn.bufnr(final_path, true)
+        vim.api.nvim_buf_set_option(new_buffer, 'buflisted', true)
+        vim.api.nvim_set_current_buf(new_buffer)
+
+        if current_buf_name == buf_name then
+            new_current_buf = new_buffer
+        end
+
+        changed = true
+
+        ::continue::
     end
+    vim.api.nvim_set_current_buf(new_current_buf)
 
-    local name = Path:new(current_buf_name):absolute()
-    local start, fin = string.find(name, cwd..Path.path.sep, 1, true)
-    if start ~= nil then
-        return true
-    end
-
-    start, fin = string.find(name, prev_path, 1, true)
-    if start == nil then
-        return false
-    end
-
-    local local_name = name:sub(fin + 2)
-
-    local final_path = Path:new({cwd, local_name}):absolute()
-
-    if not Path:new(final_path):exists() then
-        return false
-    end
-
-    local bufnr = vim.fn.bufnr(final_path, true)
-    vim.api.nvim_set_current_buf(bufnr)
-    return true
+    return changed
 end
 
 M.on_tree_change = function(cb)
