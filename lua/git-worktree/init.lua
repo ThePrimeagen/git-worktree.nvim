@@ -129,7 +129,7 @@ local function update_current_buffer_with_fallback(op, metadata)
     if not changed then
         status:log().debug("Could not change to the file in the new worktree, running `e .`")
         if M._config.update_on_change_command then
-            status:log().warn("`update_on_change_command` will be soon be deprecated. Use `update_on_new_worktree` instead.")
+            status:log().warn("`update_on_change_command` will be soon be deprecated. Use `update_on_worktree_change` instead.")
             vim.cmd(M._config.update_on_change_command)
             return
         end
@@ -140,7 +140,7 @@ end
 local function on_tree_change_handler(op, metadata)
     if M._config.update_on_change then
         if op == Enum.Operations.Switch then
-            M._config.update_on_new_worktree(op, metadata)
+            M._config.update_on_worktree_change(op, metadata)
         end
     end
 end
@@ -547,7 +547,7 @@ M.setup = function(config)
         change_directory_command = "cd",
         update_on_change = true,
         update_on_change_command = nil,
-        update_on_new_worktree = update_current_buffer_with_fallback,
+        update_on_worktree_change = update_current_buffer_with_fallback,
         clearjumps_on_change = true,
         -- default to false to avoid breaking the previous default behavior
         confirm_telescope_deletions = false,
