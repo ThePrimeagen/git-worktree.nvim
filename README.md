@@ -71,6 +71,9 @@ git config remote.origin.fetch "+refs/heads/*:refs/remotes/origin/*"
 
 ## Options<a name="options"></a>
 
+`base_directory`: Allow's you to define a base path for the creation of new 
+worktrees.
+
 `change_directory_command`: The vim command used to change to the new worktree directory.
 Set this to `tcd` if you want to only change the `pwd` for the current vim Tab.
 
@@ -89,6 +92,7 @@ edit the wrong files.
 
 ```lua
 require("git-worktree").setup({
+    base_directory = <str> -- default: "./"
     change_directory_command = <str> -- default: "cd",
     update_on_change = <boolean> -- default: true,
     update_on_change_command = <str> -- default: "e .",

@@ -535,6 +535,7 @@ end
 M.setup = function(config)
     config = config or {}
     M._config = vim.tbl_deep_extend("force", {
+        base_directory = './',
         change_directory_command = "cd",
         update_on_change = true,
         update_on_change_command = "e .",
