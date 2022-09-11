@@ -133,7 +133,7 @@ local create_worktree = function(opts)
 
                     if string.match(name, '/') == nil and 
                         git_worktree._config.base_directory then
-                      name = git_worktree._config.base_directory .. branch
+                      name = git_worktree._config.base_directory .. name
                     end
         
                     git_worktree.create_worktree(name, branch)
