@@ -87,6 +87,8 @@ edit the wrong files.
 
 `autopush`: When creating a new worktree, it will push the branch to the upstream then perform a `git rebase`
 
+`fetch_on_create`: When creating a new worktree, do a git fetch. Defaults to true
+
 ```lua
 require("git-worktree").setup({
     change_directory_command = <str> -- default: "cd",
@@ -94,6 +96,7 @@ require("git-worktree").setup({
     update_on_change_command = <str> -- default: "e .",
     clearjumps_on_change = <boolean> -- default: true,
     autopush = <boolean> -- default: false,
+    fetch_on_create = <boolean> -- default: true,
 })
 ```
 
