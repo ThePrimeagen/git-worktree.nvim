@@ -228,6 +228,7 @@ end
 return require("telescope").register_extension(
            {
         exports = {
+            git_worktree = telescope_git_worktree,
             git_worktrees = telescope_git_worktree,
             create_git_worktree = create_worktree
         }
