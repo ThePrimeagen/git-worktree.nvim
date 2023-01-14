@@ -1,8 +1,8 @@
 # git-worktree.nvim<a name="git-worktreenvim"></a>
 
 A simple wrapper around git worktree operations, create, switch, and delete.
-There is some assumed workflow within this plugin, but pull requests are welcomed to
-fix that).
+There is some assumed workflow within this plugin, but pull requests are welcome to
+fix that.
 
 <!-- mdformat-toc start --slug=github --maxlevel=6 --minlevel=1 -->
 
@@ -21,7 +21,7 @@ fix that).
 <!-- mdformat-toc end -->
 
 ## Known Issues<a name="known-issues"></a>
-There are a few known issues.  I'll try to be actively filing them in the issues.  If you experience something, and it's not an issue, feel free to make an issue!  Even if it's a dupe I am just happy for the contribution.
+There are a few known issues.  I'll try to be actively filing them in the issues. If you experience something, and it's not an issue, feel free to make an issue!  Even if it's a dupe I am just happy for the contribution.
 
 ## Dependencies<a name="dependencies"></a>
 
@@ -58,7 +58,7 @@ git-worktree writes logs to a `git-worktree-nvim.log` file that resides in Neovi
 By default, logging is enabled for warnings and above. This can be changed by setting `vim.g.git_worktree_log_level` variable to one of the following log levels: `trace`, `debug`, `info`, `warn`, `error`, or `fatal`. Note that this would have to be done **before** git-worktree's `setup` call. Alternatively, it can be more convenient to launch Neovim with an environment variable, e.g. `> GIT_WORKTREE_NVIM_LOG=trace nvim`. In case both, `vim.g` and an environment variable are used, the log level set by the environment variable overrules. Supplying an invalid log level defaults back to warnings.
 
 ### Troubleshooting
-If the upstream is not setup correctly when trying to pull or push, make sure the following command returns what is shown below. This seems to happen with the gitHub cli.
+If the upstream is not set up correctly when trying to pull or push, make sure the following command returns what is shown below. This seems to happen with the GitHub CLI.
 ```
 git config --get remote.origin.fetch
 
@@ -85,7 +85,7 @@ This option defaults to `e .` which opens the root directory of the new worktree
 cleared so that you don't accidentally go backward to a different branch and
 edit the wrong files.
 
-`autopush`: When creating a new worktree, it will push the branch to the upstream then perform a `git rebase`
+`autopush`: When creating a new worktree, it will push the branch to the upstream and then perform a `git rebase`
 
 ```lua
 require("git-worktree").setup({
@@ -101,7 +101,7 @@ require("git-worktree").setup({
 
 Three primary functions should cover your day-to-day.
 
-The path can be either relative from the git root dir or absoulut path to the worktree.
+The path can be either relative from the git root directory or absolute path to the worktree.
 
 ```lua
 -- Creates a worktree.  Requires the path, branch name, and the upstream
@@ -125,7 +125,7 @@ Add the following to your vimrc to load the telescope extension
 require("telescope").load_extension("git_worktree")
 ```
 
-### Switch and Delete a worktrees
+### Switch and Delete Worktrees
 To bring up the telescope window listing your workspaces run the following
 
 ```lua
@@ -141,15 +141,15 @@ To bring up the telescope window to create a new worktree run the following
 ```lua
 :lua require('telescope').extensions.git_worktree.create_git_worktree()
 ```
-First a telescope git branch window will appear. Presing enter will choose the selected branch for the branch name. If no branch is selected, then the prompt will be used as the branch name.
+First, a telescope git branch window will appear. Pressing Enter will choose the selected branch for the branch name. If no branch is selected, then the prompt will be used as the branch name.
 
 After the git branch window, a prompt will be presented to enter the path name to write the worktree to.
 
-As of now you can not specify the upstream in the telescope create workflow, however if it finds a branch of the same name in the origin it will use it
+As of now, you cannot specify the upstream in the telescope create workflow, however, if it finds a branch of the same name in the origin it will use it
 
 ## Hooks<a name="hooks"></a>
 
-Yes!  The best part about `git-worktree` is that it emits information so that you
+Yes! The best part about `git-worktree` is that it emits information so that you
 can act on it.
 
 ```lua
@@ -175,10 +175,10 @@ end)
 ```
 
 This means that you can use [harpoon](https://github.com/ThePrimeagen/harpoon)
-or other plugins to perform follow up operations that will help in turbo
+or other plugins to perform follow-up operations that will help in turbo
 charging your development experience!
 
 ## Made with fury<a name="made-with-fury"></a>
 
 All plugins are made live on [Twitch](https://twitch.tv/ThePrimeagen) with love
-and fury.  Come and join!
+and fury. Come and join!
