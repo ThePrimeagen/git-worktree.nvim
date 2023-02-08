@@ -163,9 +163,19 @@ local telescope_git_worktree = function(opts)
             local index = #results + 1
             for key, val in pairs(widths) do
                 if key == 'path' then
-                    local new_path = utils.transform_path(opts, entry[key])
-                    local path_len = strings.strdisplaywidth(new_path or "")
-                    widths[key] = math.max(val, path_len)
+                    -- Some users have found that transform_path raises an error because telescope.state#get_status
+                    -- outputs an empty table. When that happens, we need to use the default value.
+                    -- This seems to happen in distros such as AstroNvim and NvChad
+                    --
+                    -- Reference: https://github.com/ThePrimeagen/git-worktree.nvim/issues/97
+                    local transformed_ok, new_path = pcall(utils.transform_path, opts, entry[key])
+
+                    if transformed_ok then
+                        local path_len = strings.strdisplaywidth(new_path or "")
+                        widths[key] = math.max(val, path_len)
+                    else
+                        widths[key] = math.max(val, strings.strdisplaywidth(entry[key] or ""))
+                    end
                 else
                     widths[key] = math.max(val, strings.strdisplaywidth(entry[key] or ""))
                 end
