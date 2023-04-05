@@ -141,7 +141,7 @@ To bring up the telescope window to create a new worktree run the following
 ```lua
 :lua require('telescope').extensions.git_worktree.create_git_worktree()
 ```
-First a telescope git branch window will appear. Presing enter will choose the selected branch for the branch name. If no branch is selected, then the prompt will be used as the branch name.
+First a telescope git branch window will appear. Pressing enter will choose the selected branch for the branch name. If no branch is selected, then the prompt will be used as the branch name.
 
 After the git branch window, a prompt will be presented to enter the path name to write the worktree to.
 
