@@ -521,6 +521,10 @@ M.on_tree_change = function(cb)
     table.insert(on_change_callbacks, cb)
 end
 
+M.before_tree_change = function(cb)
+    table.insert(before_change_callbacks , cb)
+end
+
 M.reset = function()
     on_change_callbacks = {}
     before_change_callbacks = {}
