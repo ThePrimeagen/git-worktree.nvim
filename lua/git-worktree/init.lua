@@ -9,6 +9,7 @@ local M = {}
 local git_worktree_root = nil
 local current_worktree_path = nil
 local on_change_callbacks = {}
+local before_change_callbacks = {}
 
 M.setup_git_info = function()
     local cwd = vim.loop.cwd()
@@ -135,6 +136,14 @@ local function on_tree_change_handler(op, metadata)
         end
     end
 end
+
+local function emit_before_change(op, metadata)
+    status:next_status(string.format("Running before %s callbacks", op))
+    for idx = 1, #before_change_callbacks do
+        before_change_callbacks[idx](op, metadata)
+    end
+end
+
 
 local function emit_on_change(op, metadata)
     -- TODO: We don't have a way to async update what is running
@@ -514,6 +523,7 @@ end
 
 M.reset = function()
     on_change_callbacks = {}
+    before_change_callbacks = {}
 end
 
 M.get_root = function()
