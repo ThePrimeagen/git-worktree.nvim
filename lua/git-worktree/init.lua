@@ -394,7 +394,9 @@ local function create_worktree(path, branch, upstream, found_branch)
 end
 
 M.create_worktree = function(path, branch, upstream)
-    status:reset(8)
+    status:reset(9)
+
+    emit_before_change(Enum.Operations.Create, { path = path, prev_path = vim.loop.cwd() })
 
     if upstream == nil then
         if has_origin() then
@@ -417,7 +419,10 @@ M.create_worktree = function(path, branch, upstream)
 end
 
 M.switch_worktree = function(path)
-    status:reset(2)
+    status:reset(3)
+
+    emit_before_change(Enum.Operations.Switch, { path = path, prev_path = vim.loop.cwd() })
+
     M.setup_git_info()
     has_worktree(path, function(found)
 
@@ -438,7 +443,10 @@ M.delete_worktree = function(path, force, opts)
         opts = {}
     end
 
-    status:reset(2)
+    status:reset(3)
+
+    emit_before_change(Enum.Operations.Delete, { path = vim.loop.cwd() })
+
     M.setup_git_info()
     has_worktree(path, function(found)
         if not found then
