@@ -9,6 +9,7 @@ local M = {}
 local git_worktree_root = nil
 local current_worktree_path = nil
 local on_change_callbacks = {}
+local before_change_callbacks = {}
 
 M.setup_git_info = function()
     local cwd = vim.loop.cwd()
@@ -135,6 +136,14 @@ local function on_tree_change_handler(op, metadata)
         end
     end
 end
+
+local function emit_before_change(op, metadata)
+    status:next_status(string.format("Running before %s callbacks", op))
+    for idx = 1, #before_change_callbacks do
+        before_change_callbacks[idx](op, metadata)
+    end
+end
+
 
 local function emit_on_change(op, metadata)
     -- TODO: We don't have a way to async update what is running
@@ -385,7 +394,9 @@ local function create_worktree(path, branch, upstream, found_branch)
 end
 
 M.create_worktree = function(path, branch, upstream)
-    status:reset(8)
+    status:reset(9)
+
+    emit_before_change(Enum.Operations.Create, { path = path, prev_path = vim.loop.cwd() })
 
     if upstream == nil then
         if has_origin() then
@@ -408,7 +419,10 @@ M.create_worktree = function(path, branch, upstream)
 end
 
 M.switch_worktree = function(path)
-    status:reset(2)
+    status:reset(3)
+
+    emit_before_change(Enum.Operations.Switch, { path = path, prev_path = vim.loop.cwd() })
+
     M.setup_git_info()
     has_worktree(path, function(found)
 
@@ -429,7 +443,10 @@ M.delete_worktree = function(path, force, opts)
         opts = {}
     end
 
-    status:reset(2)
+    status:reset(3)
+
+    emit_before_change(Enum.Operations.Delete, { path = vim.loop.cwd() })
+
     M.setup_git_info()
     has_worktree(path, function(found)
         if not found then
@@ -512,8 +529,13 @@ M.on_tree_change = function(cb)
     table.insert(on_change_callbacks, cb)
 end
 
+M.before_tree_change = function(cb)
+    table.insert(before_change_callbacks , cb)
+end
+
 M.reset = function()
     on_change_callbacks = {}
+    before_change_callbacks = {}
 end
 
 M.get_root = function()
