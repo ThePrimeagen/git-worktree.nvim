@@ -1,1 +1,3 @@
 .zshrc.bak
+.direnv
+.pre-commit-config.yaml
