@@ -174,9 +174,15 @@ local function create_worktree_job(path, branch, found_branch)
     local worktree_add_args = {'worktree', 'add'}
 
     if not found_branch then
-        table.insert(worktree_add_args, '-b')
-        table.insert(worktree_add_args, branch)
-        table.insert(worktree_add_args, path)
+        if branch:find('^origin/') then
+            table.insert(worktree_add_args, path)
+            local local_branch_name = branch:gsub("origin/", "")
+            table.insert(worktree_add_args, local_branch_name)
+        else
+            table.insert(worktree_add_args, '-b')
+            table.insert(worktree_add_args, branch)
+            table.insert(worktree_add_args, path)
+        end
     else
         table.insert(worktree_add_args, path)
         table.insert(worktree_add_args, branch)
