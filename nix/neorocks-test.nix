@@ -1,5 +1,6 @@
 {
   extraPkgs ? [],
+  git,
   name,
   neorocksTest,
   nvim,
@@ -24,7 +25,9 @@ in
     neovim = nvim-wrapped;
 
     extraPackages =
-      []
+      [
+        git
+      ]
       ++ extraPkgs;
 
     preCheck = ''

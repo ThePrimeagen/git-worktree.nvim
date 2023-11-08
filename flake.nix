@@ -66,6 +66,7 @@
             buildInputs =
               (with pkgs; [
                 neorocks
+                haskellPackages.neolua-bin
               ])
               ++ (with inputs.pre-commit-hooks.packages.${system}; [
                 alejandra

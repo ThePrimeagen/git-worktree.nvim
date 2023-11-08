@@ -1,3 +1,7 @@
 .zshrc.bak
 .direnv
 .pre-commit-config.yaml
+/luarocks
+/lua
+/lua_modules
+/.luarocks
