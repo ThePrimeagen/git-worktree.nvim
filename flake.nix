@@ -62,7 +62,11 @@
         devShells = {
           default = pkgs.mkShell {
             name = "haskell-tools.nvim-shell";
-            inherit (pre-commit-check) shellHook;
+            shellHook =
+              pre-commit-check.shellHook
+              + ''
+                export RT_LIBDIR=${pkgs.glibc}
+              '';
             buildInputs =
               (with pkgs; [
                 neorocks
@@ -75,6 +79,7 @@
                 #luacheck
                 #markdownlint-cli
               ]);
+            LD_LIBRARY_PATH = pkgs.lib.makeLibraryPath [];
           };
         };
 
