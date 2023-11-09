@@ -13,14 +13,13 @@ local function set_log_level()
     return "warn" -- default, if user hasn't set to one from log_levels
 end
 
-
 function Status:new(options)
-    local obj = vim.tbl_extend('force', {
+    local obj = vim.tbl_extend("force", {
         -- What to do here?
         logger = require("plenary.log").new({
             plugin = "git-worktree-nvim",
             level = set_log_level(),
-        })
+        }),
     }, options or {})
 
     setmetatable(obj, self)

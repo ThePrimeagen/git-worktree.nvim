@@ -15,8 +15,5 @@ return {
         Create = "create",
         Switch = "switch",
         Delete = "delete",
-    })
+    }),
 }
-
-
-

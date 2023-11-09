@@ -6,8 +6,9 @@ local function on_tree_change_handler(op, metadata)
         if op == Enum.Operations.Switch then
             local changed = M.update_current_buffer(metadata["prev_path"])
             if not changed then
-                status:log().debug(
-                "Could not change to the file in the new worktree, running the `update_on_change_command`")
+                status
+                    :log()
+                    .debug("Could not change to the file in the new worktree, running the `update_on_change_command`")
                 vim.cmd(M._config.update_on_change_command)
             end
         end

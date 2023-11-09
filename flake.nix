@@ -47,7 +47,7 @@
           src = self;
           hooks = {
             alejandra.enable = true;
-            #stylua.enable = true;
+            stylua.enable = true;
             #luacheck.enable = true;
             #markdownlint.enable = true;
           };
@@ -62,11 +62,7 @@
         devShells = {
           default = pkgs.mkShell {
             name = "haskell-tools.nvim-shell";
-            shellHook =
-              pre-commit-check.shellHook
-              + ''
-                export RT_LIBDIR=${pkgs.glibc}
-              '';
+            inherit (pre-commit-check) shellHook;
             buildInputs =
               (with pkgs; [
                 neorocks
@@ -74,10 +70,10 @@
               ])
               ++ (with inputs.pre-commit-hooks.packages.${system}; [
                 alejandra
-                #lua-language-server
-                #stylua
-                #luacheck
-                #markdownlint-cli
+                lua-language-server
+                stylua
+                luacheck
+                markdownlint-cli
               ]);
             LD_LIBRARY_PATH = pkgs.lib.makeLibraryPath [];
           };

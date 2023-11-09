@@ -10,7 +10,6 @@ local git_worktree_root = nil
 local current_worktree_path = nil
 local on_change_callbacks = {}
 
-
 local function change_dirs(path)
     local worktree_path = M.get_worktree_path(path)
 
@@ -23,7 +22,7 @@ local function change_dirs(path)
         vim.cmd(cmd)
         current_worktree_path = worktree_path
     else
-        status:error('Could not chang to directory: ' .. worktree_path)
+        status:error("Could not chang to directory: " .. worktree_path)
     end
 
     if M._config.clearjumps_on_change then
@@ -35,11 +34,11 @@ local function change_dirs(path)
 end
 
 local function create_worktree_job(path, branch, found_branch)
-    local worktree_add_cmd = 'git'
-    local worktree_add_args = { 'worktree', 'add' }
+    local worktree_add_cmd = "git"
+    local worktree_add_args = { "worktree", "add" }
 
     if not found_branch then
-        table.insert(worktree_add_args, '-b')
+        table.insert(worktree_add_args, "-b")
         table.insert(worktree_add_args, branch)
         table.insert(worktree_add_args, path)
     else
@@ -53,7 +52,7 @@ local function create_worktree_job(path, branch, found_branch)
         cwd = git_worktree_root,
         on_start = function()
             status:next_status(worktree_add_cmd .. " " .. table.concat(worktree_add_args, " "))
-        end
+        end,
     })
 end
 
@@ -64,9 +63,9 @@ local function has_worktree(path, cb)
     local plenary_path = Path:new(path)
 
     local job = Job:new({
-        'git',
-        'worktree',
-        'list',
+        "git",
+        "worktree",
+        "list",
         on_stdout = function(_, data)
             local list_data = {}
             for section in data:gmatch("%S+") do
@@ -79,9 +78,7 @@ local function has_worktree(path, cb)
             if plenary_path:is_absolute() then
                 start = data == path
             else
-                local worktree_path = Path:new(
-                    string.format("%s" .. Path.path.sep .. "%s", git_worktree_root, path)
-                )
+                local worktree_path = Path:new(string.format("%s" .. Path.path.sep .. "%s", git_worktree_root, path))
                 worktree_path = worktree_path:absolute()
                 start = data == worktree_path
             end
@@ -90,7 +87,7 @@ local function has_worktree(path, cb)
             local start_with_head = string.find(data, string.format("[heads/%s]", path), 1, true)
             found = found or start or start_with_head
         end,
-        cwd = git_worktree_root
+        cwd = git_worktree_root,
     })
 
     job:after(function()
@@ -110,7 +107,8 @@ local function failure(from, cmd, path, soft_error)
             path,
             vim.inspect(cmd),
             vim.inspect(e:result()),
-            vim.inspect(e:stderr_result()))
+            vim.inspect(e:stderr_result())
+        )
 
         if soft_error then
             status:status(error_message)
@@ -119,8 +117,6 @@ local function failure(from, cmd, path, soft_error)
         end
     end
 end
-
-
 
 local function create_worktree(path, branch, upstream, found_branch)
     local create = create_worktree_job(path, branch, found_branch)
@@ -132,47 +128,47 @@ local function create_worktree(path, branch, upstream, found_branch)
         worktree_path = Path:new(git_worktree_root, path):absolute()
     end
 
-    local fetch           = Job:new({
-        'git',
-        'fetch',
-        '--all',
+    local fetch = Job:new({
+        "git",
+        "fetch",
+        "--all",
         cwd = worktree_path,
         on_start = function()
             status:next_status("git fetch --all (This may take a moment)")
-        end
+        end,
     })
 
-    local set_branch_cmd  = 'git'
-    local set_branch_args = { 'branch', string.format('--set-upstream-to=%s/%s', upstream, branch) }
-    local set_branch      = Job:new({
+    local set_branch_cmd = "git"
+    local set_branch_args = { "branch", string.format("--set-upstream-to=%s/%s", upstream, branch) }
+    local set_branch = Job:new({
         command = set_branch_cmd,
         args = set_branch_args,
         cwd = worktree_path,
         on_start = function()
             status:next_status(set_branch_cmd .. " " .. table.concat(set_branch_args, " "))
-        end
+        end,
     })
 
     -- TODO: How to configure origin???  Should upstream ever be the push
     -- destination?
-    local set_push_cmd    = 'git'
-    local set_push_args   = { 'push', "--set-upstream", upstream, branch, path }
-    local set_push        = Job:new({
+    local set_push_cmd = "git"
+    local set_push_args = { "push", "--set-upstream", upstream, branch, path }
+    local set_push = Job:new({
         command = set_push_cmd,
         args = set_push_args,
         cwd = worktree_path,
         on_start = function()
             status:next_status(set_push_cmd .. " " .. table.concat(set_push_args, " "))
-        end
+        end,
     })
 
-    local rebase          = Job:new({
-        'git',
-        'rebase',
+    local rebase = Job:new({
+        "git",
+        "rebase",
         cwd = worktree_path,
         on_start = function()
             status:next_status("git rebase")
-        end
+        end,
     })
 
     if upstream ~= nil then
@@ -266,7 +262,10 @@ M.delete_worktree = function(path, force, opts)
         end
 
         local cmd = {
-            "git", "worktree", "remove", path
+            "git",
+            "worktree",
+            "remove",
+            path,
         }
 
         if force then

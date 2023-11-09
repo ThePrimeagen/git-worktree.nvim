@@ -36,7 +36,7 @@
                   "result"
                   "nix"
                   "doc"
-                  "spec" # FIXME: Add busted library
+                  "spec"
                 ];
               };
               diagnostics = {

@@ -10,9 +10,9 @@ local M = {}
 --- @return boolean
 function M.is_bare_repo()
     local inside_worktree_job = Job:new({
-        'git',
-        'rev-parse',
-        '--is-bare-repository',
+        "git",
+        "rev-parse",
+        "--is-bare-repository",
         cwd = vim.loop.cwd(),
     })
 
@@ -34,9 +34,9 @@ end
 --- @return boolean
 function M.is_worktree()
     local inside_worktree_job = Job:new({
-        'git',
-        'rev-parse',
-        '--is-inside-work-tree',
+        "git",
+        "rev-parse",
+        "--is-inside-work-tree",
         cwd = vim.loop.cwd(),
     })
 
@@ -58,20 +58,25 @@ end
 --- @param is_worktree boolean
 --- @return string|nil
 function M.find_git_dir()
-    local job = Job:new {
-        'git',
-        'rev-parse',
-        '--show-toplevel',
+    local job = Job:new({
+        "git",
+        "rev-parse",
+        "--show-toplevel",
         cwd = vim.loop.cwd(),
         on_stderr = function(_, data)
             status:log().info("ERROR: " .. data)
         end,
-    }
+    })
 
     local stdout, code = job:sync()
     if code ~= 0 then
-        status:log().error("Error in determining the git root dir: code:" ..
-            tostring(code) .. " out: " .. table.concat(stdout, "") .. ".")
+        status:log().error(
+            "Error in determining the git root dir: code:"
+                .. tostring(code)
+                .. " out: "
+                .. table.concat(stdout, "")
+                .. "."
+        )
         return nil
     end
 
@@ -115,9 +120,9 @@ end
 --- @return string|nil
 function M.find_git_toplevel()
     local find_toplevel_job = Job:new({
-        'git',
-        'rev-parse',
-        '--show-toplevel',
+        "git",
+        "rev-parse",
+        "--show-toplevel",
         cwd = vim.loop.cwd(),
     })
     local stdout, code = find_toplevel_job:sync()
@@ -132,8 +137,8 @@ end
 function M.has_branch(branch, cb)
     local found = false
     local job = Job:new({
-        'git',
-        'branch',
+        "git",
+        "branch",
         on_stdout = function(_, data)
             -- remove  markere on current branch
             data = data:gsub("*", "")
@@ -154,12 +159,12 @@ end
 function M.has_origin()
     local found = false
     local job = Job:new({
-        'git',
-        'remote',
-        'show',
+        "git",
+        "remote",
+        "show",
         on_stdout = function(_, data)
             data = vim.trim(data)
-            found = found or data == 'origin'
+            found = found or data == "origin"
         end,
         cwd = vim.loop.cwd(),
     })

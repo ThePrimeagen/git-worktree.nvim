@@ -1,4 +1,4 @@
-local system = require('util.system')
+local system = require("util.system")
 
 local M = {}
 
