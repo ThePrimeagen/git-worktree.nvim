@@ -1,5 +1,5 @@
 local Job = require("plenary").job
-local Path = require("plenary.path")
+--local Path = require("plenary.path")
 local Status = require("git-worktree.status")
 
 local status = Status:new()
@@ -55,7 +55,7 @@ function M.is_worktree()
     end
 end
 
---- @param is_worktree boolean
+-- @param is_worktree boolean
 --- @return string|nil
 function M.find_git_dir()
     local job = Job:new({

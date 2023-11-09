@@ -1,7 +1,11 @@
+local Enum = require("git-worktree.enum")
+local Status = require("git-worktree.status")
+local status = Status:new()
+
 --- @class GitWorktreeHooks
 local M = {}
 
-local function on_tree_change_handler(op, metadata)
+function M.on_tree_change_handler(op, metadata)
     if M._config.update_on_change then
         if op == Enum.Operations.Switch then
             local changed = M.update_current_buffer(metadata["prev_path"])
@@ -15,13 +19,14 @@ local function on_tree_change_handler(op, metadata)
     end
 end
 
-local function emit_on_change(op, metadata)
+function M.emit_on_change(op, metadata)
     -- TODO: We don't have a way to async update what is running
     status:next_status(string.format("Running post %s callbacks", op))
-    on_tree_change_handler(op, metadata)
-    for idx = 1, #on_change_callbacks do
-        on_change_callbacks[idx](op, metadata)
-    end
+    print(metadata)
+    -- on_tree_change_handler(op, metadata)
+    -- for idx = 1, #on_change_callbacks do
+    --     on_change_callbacks[idx](op, metadata)
+    -- end
 end
 
 return M

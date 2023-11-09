@@ -11,7 +11,7 @@ local in_repo_from_local_no_worktrees = harness.in_repo_from_local_no_worktrees
 local in_bare_repo_from_origin_2_worktrees = harness.in_bare_repo_from_origin_2_worktrees
 local in_repo_from_origin_2_worktrees = harness.in_repo_from_origin_2_worktrees
 local in_bare_repo_from_origin_2_similar_named_worktrees = harness.in_bare_repo_from_origin_2_similar_named_worktrees
-local in_repo_from_origin_2_similar_named_worktrees = harness.in_repo_from_origin_2_similar_named_worktrees
+--local in_repo_from_origin_2_similar_named_worktrees = harness.in_repo_from_origin_2_similar_named_worktrees
 local check_git_worktree_exists = harness.check_git_worktree_exists
 local check_branch_upstream = harness.check_branch_upstream
 
@@ -492,7 +492,8 @@ describe("git-worktree", function()
         )
 
         it(
-            "in a featB worktree(non bare) with file B open, switch to featC and switch to worktree root in other worktree",
+            "in a featB worktree(non bare) with file B open, switch to featC and switch to worktree"
+                .. " root in other worktree",
             in_repo_from_origin_2_worktrees(function()
                 local random_str = git_worktree.get_root():sub(git_worktree.get_root():len() - 4)
 

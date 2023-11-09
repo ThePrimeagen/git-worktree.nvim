@@ -3,6 +3,8 @@ local Path = require("plenary.path")
 local Enum = require("git-worktree.enum")
 
 local Status = require("git-worktree.status")
+local Hooks = require("git-worktree.hooks")
+local Git = require("git-worktree.git")
 
 local status = Status:new()
 local M = {}
@@ -196,14 +198,14 @@ local function create_worktree(path, branch, upstream, found_branch)
             end
 
             vim.schedule(function()
-                emit_on_change(Enum.Operations.Create, { path = path, branch = branch, upstream = upstream })
+                Hooks.emit_on_change(Enum.Operations.Create, { path = path, branch = branch, upstream = upstream })
                 M.switch_worktree(path)
             end)
         end)
     else
         create:after(function()
             vim.schedule(function()
-                emit_on_change(Enum.Operations.Create, { path = path, branch = branch, upstream = upstream })
+                Hooks.emit_on_change(Enum.Operations.Create, { path = path, branch = branch, upstream = upstream })
                 M.switch_worktree(path)
             end)
         end)
@@ -216,7 +218,7 @@ M.create_worktree = function(path, branch, upstream)
     status:reset(8)
 
     if upstream == nil then
-        if has_origin() then
+        if Git.has_origin() then
             upstream = "origin"
         end
     end
@@ -228,7 +230,7 @@ M.create_worktree = function(path, branch, upstream)
             status:error("worktree already exists")
         end
 
-        has_branch(branch, function(found_branch)
+        Git.has_branch(branch, function(found_branch)
             create_worktree(path, branch, upstream, found_branch)
         end)
     end)
@@ -244,7 +246,7 @@ M.switch_worktree = function(path)
 
         vim.schedule(function()
             local prev_path = change_dirs(path)
-            emit_on_change(Enum.Operations.Switch, { path = path, prev_path = prev_path })
+            Hooks.emit_on_change(Enum.Operations.Switch, { path = path, prev_path = prev_path })
         end)
     end)
 end
@@ -274,7 +276,7 @@ M.delete_worktree = function(path, force, opts)
 
         local delete = Job:new(cmd)
         delete:after_success(vim.schedule_wrap(function()
-            emit_on_change(Enum.Operations.Delete, { path = path })
+            Hooks.emit_on_change(Enum.Operations.Delete, { path = path })
             if opts.on_success then
                 opts.on_success()
             end
@@ -313,12 +315,12 @@ M.update_current_buffer = function(prev_path)
     end
 
     local name = Path:new(current_buf_name):absolute()
-    local start, fin = string.find(name, cwd .. Path.path.sep, 1, true)
-    if start ~= nil then
+    local start1, _ = string.find(name, cwd .. Path.path.sep, 1, true)
+    if start1 ~= nil then
         return true
     end
 
-    start, fin = string.find(name, prev_path, 1, true)
+    local start, fin = string.find(name, prev_path, 1, true)
     if start == nil then
         return false
     end
@@ -372,10 +374,6 @@ M.setup = function(config)
         -- should this default to true or false?
         autopush = false,
     }, config)
-end
-
-M.set_status = function(msg)
-    -- TODO: make this so #1
 end
 
 M.setup()

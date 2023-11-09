@@ -48,7 +48,7 @@
           hooks = {
             alejandra.enable = true;
             stylua.enable = true;
-            #luacheck.enable = true;
+            luacheck.enable = true;
             #markdownlint.enable = true;
           };
         };

@@ -1,5 +1,3 @@
-local Path = require("plenary.path")
-local Window = require("plenary.window.float")
 local strings = require("plenary.strings")
 local pickers = require("telescope.pickers")
 local finders = require("telescope.finders")

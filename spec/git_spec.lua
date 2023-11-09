@@ -4,6 +4,7 @@ local Status = require("git-worktree.status")
 
 local status = Status:new()
 
+-- luacheck: globals repo_dir
 describe("git-worktree git operations", function()
     describe("finds git toplevel in normal repo", function()
         before_each(function()

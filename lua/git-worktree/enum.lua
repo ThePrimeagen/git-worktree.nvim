@@ -4,7 +4,7 @@ local Enum = function(tbl)
             error(string.format("%s does not exist for this enum.", key))
         end,
 
-        __newindex = function(t, key, value)
+        __newindex = function(_, _, _)
             error("Enums are immutable. You are not able to set new values")
         end,
     })
