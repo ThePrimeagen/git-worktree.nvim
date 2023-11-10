@@ -64,17 +64,19 @@
             name = "haskell-tools.nvim-shell";
             inherit (pre-commit-check) shellHook;
             buildInputs =
-              (with pkgs; [
+              with pkgs; [
                 neorocks
                 haskellPackages.neolua-bin
-              ])
-              ++ (with inputs.pre-commit-hooks.packages.${system}; [
-                alejandra
-                lua-language-server
                 stylua
-                luacheck
-                markdownlint-cli
-              ]);
+              ]
+              #++ (with inputs.pre-commit-hooks.packages.${system}; [
+              #  alejandra
+              #  lua-language-server
+              #  stylua
+              #  luacheck
+              #  markdownlint-cli
+              #])
+              ;
             LD_LIBRARY_PATH = pkgs.lib.makeLibraryPath [];
           };
         };
@@ -100,18 +102,18 @@
 
         checks = {
           inherit pre-commit-check;
-          # type-check-stable = pkgs.callPackage ./nix/type-check.nix {
-          #   stable = true;
-          #   inherit (config.packages) neodev-plugin telescope-plugin;
-          #   inherit (inputs) pre-commit-hooks;
-          #   inherit self;
-          # };
-          # type-check-nightly = pkgs.callPackage ./nix/type-check.nix {
-          #   stable = false;
-          #   inherit (config.packages) neodev-plugin telescope-plugin;
-          #   inherit (inputs) pre-commit-hooks;
-          #   inherit self;
-          # };
+          type-check-stable = pkgs.callPackage ./nix/type-check.nix {
+            stable = true;
+            inherit (config.packages) neodev-plugin telescope-plugin;
+            inherit (inputs) pre-commit-hooks;
+            inherit self;
+          };
+          type-check-nightly = pkgs.callPackage ./nix/type-check.nix {
+            stable = false;
+            inherit (config.packages) neodev-plugin telescope-plugin;
+            inherit (inputs) pre-commit-hooks;
+            inherit self;
+          };
           neorocks-test-stable = pkgs.callPackage ./nix/neorocks-test.nix {
             name = "git-worktree-stable";
             inherit self;

@@ -12,29 +12,29 @@ function M.run(cmd, ignore_err, error_msg)
 
     local output = vim.fn.system(cmd)
     if vim.v.shell_error ~= 0 and not ignore_err then
-        error(error_msg or ("Command failed: ↓\n" .. cmd .. "\nOutput from command: ↓\n" .. output))
+        error(error_msg or ('Command failed: ↓\n' .. cmd .. '\nOutput from command: ↓\n' .. output))
     end
     return output
 end
 
 local function is_macos()
-    return vim.loop.os_uname().sysname == "Darwin"
+    return vim.loop.os_uname().sysname == 'Darwin'
 end
 
 ---Create a temporary directory for use
 ---@param suffix string? The suffix to be appended to the temp directory, ideally avoid spaces in your suffix
 ---@return string The path to the temporary directory
 function M.create_temp_dir(suffix)
-    suffix = "git-worktree-" .. (suffix or "")
+    suffix = 'git-worktree-' .. (suffix or '')
 
     local cmd
     if is_macos() then
-        cmd = string.format("mktemp -d -t %s", suffix)
+        cmd = string.format('mktemp -d -t %s', suffix)
     else
-        cmd = string.format("mktemp -d --suffix=%s", suffix)
+        cmd = string.format('mktemp -d --suffix=%s', suffix)
     end
 
-    local prefix = is_macos() and "/private" or ""
+    local prefix = is_macos() and '/private' or ''
     return prefix .. vim.trim(M.run(cmd))
 end
 

@@ -1,3 +1,5 @@
+self = false
+
 ignore = {
 }
 read_globals = {
