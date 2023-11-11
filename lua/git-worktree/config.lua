@@ -1,36 +1,23 @@
 local M = {}
 
----@class GitWorktreeConfig
+---@class GitWorktree.Config
+local defaults = {
+    change_directory_command = 'cd',
+    update_on_change = true,
+    update_on_change_command = 'e .',
+    clearjumps_on_change = true,
+    confirm_telescope_deletions = true,
+    autopush = false,
+}
 
----@class GitWorktreePartialConfig
----@field change_directory_command?  string
----@field update_on_change? boolean
----@field update_on_change_command? string
----@field clearjumps_on_change? boolean
----@field confirm_telescope_deletions? boolean
----@field autopush? boolean
+---@type GitWorktree.Config
+M.options = {}
 
----@return GitWorktreeConfig
-function M.get_default_config()
-    return {
-        change_directory_command = 'cd',
-        update_on_change = true,
-        update_on_change_command = 'e .',
-        clearjumps_on_change = true,
-        confirm_telescope_deletions = true,
-        autopush = false,
-    }
+---@param opts? GitWorktree.Config
+function M.setup(opts)
+    M.options = vim.tbl_deep_extend('force', defaults, opts or {})
 end
 
----@param partial_config GitWorktreePartialConfig
----@param latest_config GitWorktreeConfig?
----@return GitWorktreeConfig
-function M.merge_config(partial_config, latest_config)
-    local config = latest_config or M.get_default_config()
-
-    config = vim.tbl_extend('force', config, partial_config)
-
-    return config
-end
+M.setup()
 
 return M

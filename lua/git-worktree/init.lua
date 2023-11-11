@@ -2,7 +2,7 @@
 -- local Path = require("plenary.path")
 -- local Enum = require("git-worktree.enum")
 
-local Config = require('git-worktree.config')
+-- local Config = require('git-worktree.config')
 -- local Git = require("git-worktree.git")
 -- local Hooks = require("git-worktree.hooks")
 local Status = require('git-worktree.status')
@@ -17,21 +17,9 @@ local status = Status:new()
 
 local M = {}
 
-M.__index = M
-
----@return GitWorktree
-function M:new()
-    local config = Config.get_default_config()
-    return setmetatable({
-        config = config,
-    }, self)
-end
-
----@param partial_config GitWorktreePartialConfig
----@return GitWorktree
-function M:setup(partial_config)
-    self.config = Config.merge_config(partial_config, self.config)
-    return self
+---@param opts? GitWorktree.Config
+function M.setup(opts)
+    require('git-worktree.config').setup(opts)
 end
 
 -- local function change_dirs(path)
@@ -405,4 +393,4 @@ end
 -- M.setup()
 -- --M.Operations = Enum.Operations
 
-return M:new()
+return M
