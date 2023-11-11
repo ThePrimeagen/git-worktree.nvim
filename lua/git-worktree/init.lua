@@ -368,15 +368,15 @@ local function create_worktree(path, branch, upstream, found_branch)
             end
 
             vim.schedule(function()
-                emit_on_change(Enum.Operations.Create, {path = path, branch = branch, upstream = upstream})
-                M.switch_worktree(path)
+                emit_on_change(Enum.Operations.Create, {path = worktree_path, branch = branch, upstream = upstream})
+                M.switch_worktree(worktree_path)
             end)
         end)
     else
         create:after(function()
             vim.schedule(function()
-                emit_on_change(Enum.Operations.Create, {path = path, branch = branch, upstream = upstream})
-                M.switch_worktree(path)
+                emit_on_change(Enum.Operations.Create, {path = worktree_path, branch = branch, upstream = upstream})
+                M.switch_worktree(worktree_path)
             end)
         end)
     end
