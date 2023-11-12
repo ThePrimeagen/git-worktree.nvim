@@ -77,9 +77,9 @@ Set this to `tcd` if you want to only change the `pwd` for the current vim Tab.
 `update_on_change`:  Updates the current buffer to point to the new work tree if
 the file is found in the new project. Otherwise, the following command will be run.
 
-`update_on_change_command`: The vim command to run during the `update_on_change` event.
-Note, that this command will only be run when the current file is not found in the new worktree.
-This option defaults to `e .` which opens the root directory of the new worktree.
+`update_on_new_worktree`: The lua function to be run after changing the working
+directory to the new worktree. The default function is to update the current
+buffer to the equivalent file in the new worktree.
 
 `clearjumps_on_change`: Every time you switch branches, your jumplist will be
 cleared so that you don't accidentally go backward to a different branch and
@@ -87,11 +87,16 @@ edit the wrong files.
 
 `autopush`: When creating a new worktree, it will push the branch to the upstream then perform a `git rebase`
 
+*DEPRECATED*
+`update_on_change_command`: The vim command to run during the `update_on_change` event.
+Note, that this command will only be run when the current file is not found in the new worktree.
+This option defaults to `e .` which opens the root directory of the new worktree.
+
 ```lua
 require("git-worktree").setup({
     change_directory_command = <str> -- default: "cd",
     update_on_change = <boolean> -- default: true,
-    update_on_change_command = <str> -- default: "e .",
+    update_on_new_worktree = <function(op, metadata)> -- default: `update_current_buffer_with_fallback`,
     clearjumps_on_change = <boolean> -- default: true,
     autopush = <boolean> -- default: false,
 })

@@ -124,14 +124,23 @@ M.setup_git_info = function()
 
 end
 
+local function update_current_buffer_with_fallback(op, metadata)
+    local changed = M.update_current_buffer(metadata["prev_path"])
+    if not changed then
+        status:log().debug("Could not change to the file in the new worktree, running `e .`")
+        if M._config.update_on_change_command then
+            status:log().warn("`update_on_change_command` will be soon be deprecated. Use `update_on_worktree_change` instead.")
+            vim.cmd(M._config.update_on_change_command)
+            return
+        end
+        vim.cmd("e .")
+    end
+end
+
 local function on_tree_change_handler(op, metadata)
     if M._config.update_on_change then
         if op == Enum.Operations.Switch then
-            local changed = M.update_current_buffer(metadata["prev_path"])
-            if not changed then
-                status:log().debug("Could not change to the file in the new worktree, running the `update_on_change_command`")
-                vim.cmd(M._config.update_on_change_command)
-            end
+            M._config.update_on_worktree_change(op, metadata)
         end
     end
 end
@@ -537,7 +546,8 @@ M.setup = function(config)
     M._config = vim.tbl_deep_extend("force", {
         change_directory_command = "cd",
         update_on_change = true,
-        update_on_change_command = "e .",
+        update_on_change_command = nil,
+        update_on_worktree_change = update_current_buffer_with_fallback,
         clearjumps_on_change = true,
         -- default to false to avoid breaking the previous default behavior
         confirm_telescope_deletions = false,
