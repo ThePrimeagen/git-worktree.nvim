@@ -47,7 +47,10 @@ installed.
 This repository does work best with a bare repo.  To clone a bare repo, do the following.
 
 ```shell
-git clone --bare <upstream>
+mkdir myproject
+cd myproject
+git clone --bare <upstream> .bare
+echo "gitdir: ./.bare" > .git
 ```
 
 If you do not use a bare repo, using telescope create command will be more helpful in the process of creating a branch.
