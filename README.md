@@ -112,7 +112,7 @@ The path can be either relative from the git root dir or absolute path to the wo
 -- Example:
 :lua require("git-worktree").switch_worktree("feat-69")
 
--- deletes to an existing worktree.  Requires the path name
+-- deletes an existing worktree.  Requires the path name
 -- Example:
 :lua require("git-worktree").delete_worktree("feat-69")
 ```
