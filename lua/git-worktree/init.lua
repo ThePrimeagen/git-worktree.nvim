@@ -537,7 +537,7 @@ M.setup = function(config)
     M._config = vim.tbl_deep_extend("force", {
         change_directory_command = "cd",
         update_on_change = true,
-        update_on_change_command = "e .",
+        update_on_change_command = "if expand('%:t') != '' | e . | endif",
         clearjumps_on_change = true,
         -- default to false to avoid breaking the previous default behavior
         confirm_telescope_deletions = false,
