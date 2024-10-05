@@ -153,11 +153,23 @@ local telescope_git_worktree = function(opts)
 
     local parse_line = function(line)
         local fields = vim.split(string.gsub(line, "%s+", " "), " ")
+
         local entry = {
             path = fields[1],
             sha = fields[2],
             branch = fields[3],
         }
+
+        if #fields > 3 then
+            local path = fields[1]
+            for i = 2, #fields - 2 do
+                path = path .. ' ' .. fields[i]
+            end
+
+            entry.path = path
+            entry.sha = fields[#fields - 1]
+            entry.branch = fields[#fields]
+        end
 
         if entry.sha ~= "(bare)" then
             local index = #results + 1

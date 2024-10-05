@@ -152,7 +152,8 @@ local function change_dirs(path)
 
     -- vim.loop.chdir(worktree_path)
     if Path:new(worktree_path):exists() then
-        local cmd = string.format("%s %s", M._config.change_directory_command, worktree_path)
+        local escaped_path = string.gsub(worktree_path, "%s", "\\ ")
+        local cmd = string.format("%s %s", M._config.change_directory_command, escaped_path)
         status:log().debug("Changing to directory " .. worktree_path)
         vim.cmd(cmd)
         current_worktree_path = worktree_path
@@ -207,6 +208,13 @@ local function has_worktree(path, cb)
             end
 
             data = list_data[1]
+
+            if #data > 3 then
+                data = list_data[1]
+                for i = 2, #list_data - 2 do
+                    data = data .. ' ' .. list_data[i]
+                end
+            end
 
             local start
             if plenary_path:is_absolute() then
