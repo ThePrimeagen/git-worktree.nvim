@@ -145,6 +145,12 @@ local function emit_on_change(op, metadata)
     end
 end
 
+local function change_dirs_internal(path)
+    local cmd = string.format("%s '%s'", M._config.change_directory_command, path)
+    status:log().debug("Changing to directory " .. path)
+    vim.cmd(cmd)
+end
+
 local function change_dirs(path)
     local worktree_path = M.get_worktree_path(path)
 
@@ -152,12 +158,10 @@ local function change_dirs(path)
 
     -- vim.loop.chdir(worktree_path)
     if Path:new(worktree_path):exists() then
-        local cmd = string.format("%s %s", M._config.change_directory_command, worktree_path)
-        status:log().debug("Changing to directory " .. worktree_path)
-        vim.cmd(cmd)
+        change_dirs_internal(worktree_path)
         current_worktree_path = worktree_path
     else
-        status:error('Could not chang to directory: ' ..worktree_path)
+        status:error('Could not change to directory: ' ..worktree_path)
     end
 
     if M._config.clearjumps_on_change then
@@ -449,6 +453,11 @@ M.delete_worktree = function(path, force, opts)
             emit_on_change(Enum.Operations.Delete, { path = path })
             if opts.on_success then
                 opts.on_success()
+            end
+            if vim.fn.getcwd() == path then
+                status:next_status("you deleted the current worktree, you will be switched to repo root")
+                change_dirs_internal(git_worktree_root)
+                current_worktree_path = nil
             end
         end))
 
