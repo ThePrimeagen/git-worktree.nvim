@@ -210,12 +210,11 @@ local function has_worktree(path, cb)
 
             local start
             if plenary_path:is_absolute() then
-                start = data == path
+                start = data == vim.fs.normalize(path)
             else
-                local worktree_path = Path:new(
+                local worktree_path = vim.fs.normalize(Path:new(
                     string.format("%s" .. Path.path.sep .. "%s", git_worktree_root, path)
-                )
-                worktree_path = worktree_path:absolute()
+                ):absolute())
                 start = data == worktree_path
             end
 
