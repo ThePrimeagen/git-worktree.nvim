@@ -1,5 +1,10 @@
 # git-worktree.nvim<a name="git-worktreenvim"></a>
 
+>[!CAUTION]
+> V2 of this repository is now maintained by [@polarmutex](https://github.com/polarmutex). All future updates happen over there -> [git-worktree.nvim](https://github.com/polarmutex/git-worktree.nvim).
+
+---
+
 A simple wrapper around git worktree operations, create, switch, and delete.
 There is some assumed workflow within this plugin, but pull requests are welcomed to
 fix that).
