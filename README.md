@@ -147,6 +147,70 @@ After the git branch window, a prompt will be presented to enter the path name t
 
 As of now you can not specify the upstream in the telescope create workflow, however if it finds a branch of the same name in the origin it will use it
 
+## Snacks<a name="snacks"></a>
+
+### Switch and Delete a worktrees
+
+To bring up the snacks picker listing your workspaces run the following
+
+```lua
+require("snacks-worktree").pick_git_worktree()
+-- <Enter> - switches to that worktree
+-- <c-d> - deletes that worktree
+-- <c-f> - toggles forcing of the next deletion
+```
+
+### Create a worktree
+
+To bring up the snacks picker to create a new worktree run the following
+
+```lua
+require("snacks-worktree").create_worktree()
+```
+
+First a snacks git branch picker will appear. Pressing enter will choose the selected branch for the branch name. If no branch is selected, then the prompt will be used as the branch name.
+
+After the git branch window, a prompt will be presented to enter the path name to write the worktree to.
+
+As of now you can not specify the upstream in the snacks create workflow, however if it finds a branch of the same name in the origin it will use it
+
+### Lazy installation example
+
+```lua
+{
+    "ThePrimeagen/git-worktree.nvim",
+    dependencies = {
+      "nvim-lua/plenary.nvim",
+      "folke/snacks.nvim",
+    },
+
+    opts = {
+      change_directory_command = "cd",
+      update_on_change = true,
+      update_on_change_command = "e .",
+      clearjumps_on_change = true,
+      autopush = false,
+    },
+
+    keys = {
+      {
+        "<leader>gws",
+        function()
+          require("snacks-worktree").pick_git_worktree()
+        end,
+        desc = "Pick Git Worktree",
+      },
+      {
+        "<leader>gwc",
+        function()
+          require("snacks-worktree").create_worktree()
+        end,
+        desc = "Create Git Worktree",
+      },
+    },
+  }
+```
+
 ## Hooks<a name="hooks"></a>
 
 Yes!  The best part about `git-worktree` is that it emits information so that you
