@@ -66,7 +66,7 @@ describe('git-worktree', function()
 
             local expected_path = git_worktree:get_root() .. Path.path.sep .. path
             -- Check to make sure directory was switched
-            assert.are.same(expected_path, vim.loop.cwd())
+            assert.are.same(expected_path, vim.uv.cwd())
 
             -- Check to make sure it is added to git worktree list
             assert.True(check_git_worktree_exists(expected_path))
@@ -95,7 +95,7 @@ describe('git-worktree', function()
             )
 
             -- Check to make sure directory was switched
-            assert.are.same(vim.loop.cwd(), path)
+            assert.are.same(vim.uv.cwd(), path)
 
             -- Check to make sure it is added to git worktree list
             assert.True(check_git_worktree_exists(path))
@@ -126,7 +126,7 @@ describe('git-worktree', function()
 
             -- Check to make sure directory was switched
             local expected_path = Path:new(git_worktree:get_root() .. '/' .. path):normalize()
-            assert.are.same(expected_path, vim.loop.cwd())
+            assert.are.same(expected_path, vim.uv.cwd())
 
             -- Check to make sure it is added to git worktree list
             assert.True(check_git_worktree_exists(expected_path))
@@ -157,7 +157,7 @@ describe('git-worktree', function()
             )
 
             -- Check to make sure directory was switched
-            assert.are.same(path, vim.loop.cwd())
+            assert.are.same(path, vim.uv.cwd())
 
             -- Check to make sure it is added to git worktree list
             assert.True(check_git_worktree_exists(path))
@@ -188,7 +188,7 @@ describe('git-worktree', function()
             local expected_path = git_worktree:get_root() .. '/' .. path
 
             -- Check to make sure directory was switched
-            assert.are.same(expected_path, vim.loop.cwd())
+            assert.are.same(expected_path, vim.uv.cwd())
 
             -- Check to make sure it is added to git worktree list
             assert.True(check_git_worktree_exists(expected_path))
@@ -218,7 +218,7 @@ describe('git-worktree', function()
             )
 
             -- Check to make sure directory was switched
-            assert.are.same(path, vim.loop.cwd())
+            assert.are.same(path, vim.uv.cwd())
 
             -- Check to make sure it is added to git worktree list
             assert.True(check_git_worktree_exists(path))
@@ -249,7 +249,7 @@ describe('git-worktree', function()
 
             -- Check to make sure directory was switched
             local expected_path = Path:new(git_worktree:get_root() .. '/' .. path):normalize()
-            assert.are.same(expected_path, vim.loop.cwd())
+            assert.are.same(expected_path, vim.uv.cwd())
 
             -- Check to make sure it is added to git worktree list
             assert.True(check_git_worktree_exists(expected_path))
@@ -280,7 +280,7 @@ describe('git-worktree', function()
             )
 
             -- Check to make sure directory was switched
-            assert.are.same(path, vim.loop.cwd())
+            assert.are.same(path, vim.uv.cwd())
 
             -- Check to make sure it is added to git worktree list
             assert.True(check_git_worktree_exists(path))
@@ -311,7 +311,7 @@ describe('git-worktree', function()
 
             -- Check to make sure directory was switched
             local expected_path = Path:new(git_worktree:get_root() .. '/' .. path):normalize()
-            assert.are.same(expected_path, vim.loop.cwd())
+            assert.are.same(expected_path, vim.uv.cwd())
 
             -- Check to make sure it is added to git worktree list
             assert.True(check_git_worktree_exists(expected_path))
@@ -342,7 +342,7 @@ describe('git-worktree', function()
             )
 
             -- Check to make sure directory was switched
-            assert.are.same(path, vim.loop.cwd())
+            assert.are.same(path, vim.uv.cwd())
 
             -- Check to make sure it is added to git worktree list
             assert.True(check_git_worktree_exists(path))
@@ -374,7 +374,7 @@ describe('git-worktree', function()
             )
 
             -- Check to make sure directory was switched
-            assert.are.same(vim.loop.cwd(), git_worktree:get_root() .. Path.path.sep .. path)
+            assert.are.same(vim.uv.cwd(), git_worktree:get_root() .. Path.path.sep .. path)
 
         end))
 
@@ -393,7 +393,7 @@ describe('git-worktree', function()
             )
 
             -- Check to make sure directory was switched
-            assert.are.same(vim.loop.cwd(), path)
+            assert.are.same(vim.uv.cwd(), path)
 
         end))
 
@@ -415,7 +415,7 @@ describe('git-worktree', function()
             local expected_path = Path:new(git_worktree:get_root() .. '/'..path):normalize()
 
             -- Check to make sure directory was switched
-            assert.are.same(vim.loop.cwd(), expected_path)
+            assert.are.same(vim.uv.cwd(), expected_path)
 
         end))
 
@@ -435,7 +435,7 @@ describe('git-worktree', function()
             )
 
             -- Check to make sure directory was switched
-            assert.are.same(vim.loop.cwd(), path)
+            assert.are.same(vim.uv.cwd(), path)
 
         end))
 
@@ -634,12 +634,12 @@ describe('git-worktree', function()
             reset_variables()
 
             -- Check to make sure directory was switched
-            assert.are.same(vim.loop.cwd(), git_worktree:get_root() .. Path.path.sep .. path1)
+            assert.are.same(vim.uv.cwd(), git_worktree:get_root() .. Path.path.sep .. path1)
 
             -- open A file
             vim.cmd("e A.txt")
             -- make sure it is opensd
-            assert.True(vim.loop.cwd().."/A.txt" == get_current_file())
+            assert.True(vim.uv.cwd().."/A.txt" == get_current_file())
 
             git_worktree.switch_worktree(path2)
 
@@ -653,9 +653,9 @@ describe('git-worktree', function()
             reset_variables()
 
             -- Check to make sure directory was switched
-            assert.are.same(vim.loop.cwd(), git_worktree:get_root() .. Path.path.sep .. path2)
+            assert.are.same(vim.uv.cwd(), git_worktree:get_root() .. Path.path.sep .. path2)
             -- Make sure file is switched
-            assert.True(vim.loop.cwd().."/A.txt" == get_current_file())
+            assert.True(vim.uv.cwd().."/A.txt" == get_current_file())
 
             git_worktree.switch_worktree(path1)
 
@@ -668,9 +668,9 @@ describe('git-worktree', function()
             )
 
             -- Check to make sure directory was switched
-            assert.are.same(vim.loop.cwd(), git_worktree:get_root() .. Path.path.sep .. path1)
+            assert.are.same(vim.uv.cwd(), git_worktree:get_root() .. Path.path.sep .. path1)
             -- Make sure file is switched
-            assert.True(vim.loop.cwd().."/A.txt" == get_current_file())
+            assert.True(vim.uv.cwd().."/A.txt" == get_current_file())
 
         end))
 
@@ -692,7 +692,7 @@ describe('git-worktree', function()
             reset_variables()
 
             -- Check to make sure directory was switched
-            assert.are.same(vim.loop.cwd(), path1)
+            assert.are.same(vim.uv.cwd(), path1)
 
             -- open B file
             vim.cmd("e A.txt")
@@ -711,7 +711,7 @@ describe('git-worktree', function()
             reset_variables()
 
             -- Check to make sure directory was switched
-            assert.are.same(vim.loop.cwd(), path2)
+            assert.are.same(vim.uv.cwd(), path2)
             -- Make sure file is switched
             assert.True(path2.."/A.txt" == get_current_file())
 
@@ -726,7 +726,7 @@ describe('git-worktree', function()
             )
 
             -- Check to make sure directory was switched
-            assert.are.same(vim.loop.cwd(), path1)
+            assert.are.same(vim.uv.cwd(), path1)
             -- Make sure file is switched
             assert.True(path1.."/A.txt" == get_current_file())
 
@@ -754,7 +754,7 @@ describe('git-worktree', function()
             assert.False(check_git_worktree_exists(git_worktree:get_root() .. Path.path.sep .. path))
 
             -- Check to make sure directory was not switched
-            assert.are.same(vim.loop.cwd(), git_worktree:get_root())
+            assert.are.same(vim.uv.cwd(), git_worktree:get_root())
 
         end))
 
@@ -776,7 +776,7 @@ describe('git-worktree', function()
             assert.False(check_git_worktree_exists(path))
 
             -- Check to make sure directory was not switched
-            assert.are.same(vim.loop.cwd(), git_worktree:get_root())
+            assert.are.same(vim.uv.cwd(), git_worktree:get_root())
 
         end))
 
@@ -800,7 +800,7 @@ describe('git-worktree', function()
             assert.False(check_git_worktree_exists(absolute_path))
 
             -- Check to make sure directory was not switched
-            assert.are.same(vim.loop.cwd(), git_worktree:get_root())
+            assert.are.same(vim.uv.cwd(), git_worktree:get_root())
 
         end))
 
@@ -823,7 +823,7 @@ describe('git-worktree', function()
             assert.False(check_git_worktree_exists(path))
 
             -- Check to make sure directory was not switched
-            assert.are.same(vim.loop.cwd(), git_worktree:get_root())
+            assert.are.same(vim.uv.cwd(), git_worktree:get_root())
 
         end))
 
@@ -844,8 +844,8 @@ describe('git-worktree', function()
             in_repo_from_origin_1_worktree(function()
 
             git_worktree:setup_git_info()
-            assert.are.same(vim.loop.cwd(), git_worktree:get_root())
-            assert.are.same(vim.loop.cwd(), git_worktree:get_current_worktree_path())
+            assert.are.same(vim.uv.cwd(), git_worktree:get_root())
+            assert.are.same(vim.uv.cwd(), git_worktree:get_current_worktree_path())
 
         end))
 
@@ -853,8 +853,8 @@ describe('git-worktree', function()
             in_bare_repo_from_origin_1_worktree(function()
 
             git_worktree:setup_git_info()
-            assert.are.same(vim.loop.cwd(), git_worktree:get_root())
-            assert.are.same(vim.loop.cwd(), git_worktree:get_current_worktree_path())
+            assert.are.same(vim.uv.cwd(), git_worktree:get_root())
+            assert.are.same(vim.uv.cwd(), git_worktree:get_current_worktree_path())
 
         end))
 
@@ -876,11 +876,11 @@ describe('git-worktree', function()
             )
 
             -- Check to make sure directory was switched
-            assert.are.same(vim.loop.cwd(), path)
+            assert.are.same(vim.uv.cwd(), path)
 
             git_worktree:setup_git_info()
             assert.are.same(expected_git_repo, git_worktree:get_root())
-            assert.are.same(vim.loop.cwd(), git_worktree:get_current_worktree_path())
+            assert.are.same(vim.uv.cwd(), git_worktree:get_current_worktree_path())
 
         end))
 
@@ -901,11 +901,11 @@ describe('git-worktree', function()
             )
 
             -- Check to make sure directory was switched
-            assert.are.same(vim.loop.cwd(), git_worktree:get_root() .. Path.path.sep .. path)
+            assert.are.same(vim.uv.cwd(), git_worktree:get_root() .. Path.path.sep .. path)
 
             git_worktree:setup_git_info()
             assert.are.same(expected_git_repo, git_worktree:get_root())
-            assert.are.same(vim.loop.cwd(), git_worktree:get_current_worktree_path())
+            assert.are.same(vim.uv.cwd(), git_worktree:get_current_worktree_path())
 
         end))
     end)

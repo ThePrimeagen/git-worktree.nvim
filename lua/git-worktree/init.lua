@@ -11,7 +11,7 @@ local current_worktree_path = nil
 local on_change_callbacks = {}
 
 M.setup_git_info = function()
-    local cwd = vim.loop.cwd()
+    local cwd = vim.uv.cwd()
 
     local is_in_worktree = false
 
@@ -125,11 +125,43 @@ M.setup_git_info = function()
 end
 
 local function on_tree_change_handler(op, metadata)
+    -- Do nothing if not really changing
+    if metadata["path"] == metadata["prev_path"] then
+        return nil
+    end
+
     if M._config.update_on_change then
         if op == Enum.Operations.Switch then
-            local changed = M.update_current_buffer(metadata["prev_path"])
-            if not changed then
-                status:log().debug("Could not change to the file in the new worktree, running the `update_on_change_command`")
+            -- Try to change the buffer in each window, if a buffer cannot be
+            -- changed then close that window. If no buffer is left open,
+            -- then run update_on_change_command
+            local keep_open = {}
+            local is_keep_open_empty = true
+
+            -- Try to load buffers in each window
+            for _, win in ipairs(vim.api.nvim_list_wins()) do
+                local buffer_name = vim.api.nvim_win_call(win, function()
+                    return M.update_current_buffer(metadata["prev_path"])
+                end)
+
+                if buffer_name then
+                    keep_open[buffer_name] = true
+                    is_keep_open_empty = false
+                end
+            end
+
+            -- Close all buffers that are not in keep_open
+            for _, buf in ipairs(vim.api.nvim_list_bufs()) do
+                local name = vim.api.nvim_buf_get_name(buf)
+                if not keep_open[name] then
+                    vim.api.nvim_buf_delete(buf, {})
+                end
+            end
+
+            if is_keep_open_empty then
+                status
+                    :log()
+                    .debug("Could not change to the file in the new worktree, running the `update_on_change_command`")
                 vim.cmd(M._config.update_on_change_command)
             end
         end
@@ -150,14 +182,13 @@ local function change_dirs(path)
 
     local previous_worktree = current_worktree_path
 
-    -- vim.loop.chdir(worktree_path)
     if Path:new(worktree_path):exists() then
         local cmd = string.format("%s %s", M._config.change_directory_command, worktree_path)
         status:log().debug("Changing to directory " .. worktree_path)
         vim.cmd(cmd)
         current_worktree_path = worktree_path
     else
-        status:error('Could not chang to directory: ' ..worktree_path)
+        status:error('Could not change to directory: ' ..worktree_path)
     end
 
     if M._config.clearjumps_on_change then
@@ -459,7 +490,7 @@ M.delete_worktree = function(path, force, opts)
                 opts.on_failure(e)
             end
 
-            failure(cmd, vim.loop.cwd())(e)
+            failure(cmd, vim.uv.cwd())(e)
         end)
         delete:start()
     end)
@@ -475,24 +506,24 @@ end
 
 M.update_current_buffer = function(prev_path)
     if prev_path == nil then
-        return false
+        return nil
     end
 
-    local cwd = vim.loop.cwd()
+    local cwd = vim.uv.cwd()
     local current_buf_name = vim.api.nvim_buf_get_name(0)
     if not current_buf_name or current_buf_name == "" then
-        return false
+        return nil
     end
 
     local name = Path:new(current_buf_name):absolute()
     local start, fin = string.find(name, cwd..Path.path.sep, 1, true)
     if start ~= nil then
-        return true
+        return name
     end
 
     start, fin = string.find(name, prev_path, 1, true)
     if start == nil then
-        return false
+        return nil
     end
 
     local local_name = name:sub(fin + 2)
@@ -500,12 +531,12 @@ M.update_current_buffer = function(prev_path)
     local final_path = Path:new({cwd, local_name}):absolute()
 
     if not Path:new(final_path):exists() then
-        return false
+        return nil
     end
 
-    local bufnr = vim.fn.bufnr(final_path, true)
-    vim.api.nvim_set_current_buf(bufnr)
-    return true
+    -- Open file with edit so the buffer is loaded also
+    vim.cmd("edit " .. final_path)
+    return vim.api.nvim_buf_get_name(0)
 end
 
 M.on_tree_change = function(cb)
