@@ -343,23 +343,37 @@ local function create_worktree(path, branch, upstream, found_branch)
     })
 
     if upstream ~= nil then
-        create:and_then_on_success(fetch)
-        fetch:and_then_on_success(set_branch)
+        -- Build the job chain based on config options
+        local last_job = create
 
-        if M._config.autopush then
-            -- These are "optional" operations.
-            -- We have to figure out how we want to handle these...
-            set_branch:and_then(set_push)
+        -- Fetch is required if set_upstream_on_create is enabled, or if fetch_on_create is enabled
+        local should_fetch = M._config.fetch_on_create or M._config.set_upstream_on_create
+
+        -- Conditionally add fetch to the chain
+        if should_fetch then
+            last_job:and_then_on_success(fetch)
+            fetch:after_failure(failure("create_worktree", fetch.args, worktree_path))
+            last_job = fetch
+        end
+
+        -- Conditionally add set_branch to the chain (only if fetch is enabled)
+        if M._config.set_upstream_on_create then
+            last_job:and_then_on_success(set_branch)
+            set_branch:after_failure(failure("create_worktree", set_branch.args, worktree_path, true))
+            last_job = set_branch
+        end
+
+        -- Handle autopush and rebase
+        if M._config.autopush and M._config.set_upstream_on_create then
+            -- autopush only makes sense if we're setting upstream
+            last_job:and_then(set_push)
             set_push:and_then(rebase)
             set_push:after_failure(failure("create_worktree", set_branch.args, worktree_path, true))
         else
-            set_branch:and_then(rebase)
+            last_job:and_then(rebase)
         end
 
         create:after_failure(failure("create_worktree", create.args, git_worktree_root))
-        fetch:after_failure(failure("create_worktree", fetch.args, worktree_path))
-
-        set_branch:after_failure(failure("create_worktree", set_branch.args, worktree_path, true))
 
         rebase:after(function()
 
@@ -543,6 +557,9 @@ M.setup = function(config)
         confirm_telescope_deletions = false,
         -- should this default to true or false?
         autopush = false,
+        -- fetch and set_branch config options (default to true)
+        fetch_on_create = true,
+        set_upstream_on_create = true,
     }, config)
 end
 
